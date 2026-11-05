@@ -1,0 +1,1553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08142F">
+<title>Ex Nameplate Analyzer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,500;1,600;1,700;1,800&family=Barlow:wght@400;500;600;700&family=Cairo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* Layout concept: one phone-width column. Hazard-stripe frame around a steel control panel on the home screen; navy pages with yellow signal accents for results and lessons. */
+:root {
+  --bg: #08142F;
+  --navy: #0B1B3F;
+  --card: #13295C;
+  --card-hi: #1A3470;
+  --line: #27468A;
+  --yellow: #F5C518;
+  --yellow-deep: #D9A900;
+  --ink: #0B1B3F;
+  --text: #FFFFFF;
+  --muted: #B9C6E4;
+  --steel: #C3CBD6;
+  --steel-deep: #9AA5B4;
+  --pale: #CFE2F7;
+  --tile: #DCE9F8;
+  --danger: #FF8A7E;
+  --ok: #5BD6A0;
+  --font-d: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-b: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-ar: 'Cairo', 'Segoe UI', Tahoma, system-ui, sans-serif;
+  --font-m: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-b);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  -webkit-text-size-adjust: 100%;
+}
+html[dir="rtl"] body { font-family: var(--font-ar); line-height: 1.7; }
+#app { max-width: 520px; margin: 0 auto; padding-block: 12px 28px; min-width: 0; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible {
+  outline: 3px solid var(--yellow); outline-offset: 2px;
+}
+h1, h2, h3, p { margin: 0; }
+.ltr { direction: ltr; unicode-bidi: isolate; }
+.mono { font-family: var(--font-m); }
+svg { max-width: 100%; }
+
+/* top bar */
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 12px; }
+.back { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 8px 4px; min-height: 44px; color: var(--yellow); font-family: var(--font-d); font-size: 22px; font-weight: 600; letter-spacing: .3px; }
+html[dir="rtl"] .back { font-family: var(--font-ar); font-size: 18px; }
+.back svg { width: 22px; height: 22px; }
+html[dir="rtl"] .back svg { transform: scaleX(-1); }
+.lang { display: inline-flex; border: 2px solid var(--yellow); border-radius: 18px; overflow: hidden; background: var(--navy); flex: none; }
+.lang button { background: transparent; border: 0; padding: 6px 14px; min-height: 38px; font-size: 14px; font-weight: 600; color: #fff; font-family: var(--font-b); }
+.lang button.on { background: var(--yellow); color: var(--ink); }
+.lang button[data-l="ar"] { font-family: var(--font-ar); }
+
+/* hero */
+.hero { position: relative; border-radius: 20px; overflow: hidden; background: linear-gradient(180deg, #0C2250 0%, #12326F 55%, #0B1B3F 100%); padding: 18px 16px 18px; margin-bottom: 14px; }
+.hero .skyline { position: absolute; inset-inline: 0; bottom: 0; width: 100%; height: 70%; opacity: .55; pointer-events: none; }
+.hero .inner { position: relative; }
+.hero .bar { padding-bottom: 6px; }
+.brand { font-family: var(--font-d); font-weight: 700; line-height: .92; letter-spacing: .2px; }
+.brand .t1 { display: block; font-size: 42px; color: #fff; font-style: italic; }
+.brand .t2 { display: block; font-size: 64px; color: var(--yellow); font-weight: 800; font-style: italic; margin-top: -2px; }
+.tag { margin-top: 8px; font-family: var(--font-d); font-size: 20px; font-style: italic; font-weight: 500; color: #fff; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+html[dir="rtl"] .tag { font-family: var(--font-ar); font-style: normal; font-size: 16px; }
+.tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); display: inline-block; }
+
+/* hazard frame + steel panel */
+.frame { background: repeating-linear-gradient(-45deg, #F5C518 0 15px, #16181D 15px 30px); padding: 10px; border-radius: 26px; }
+.panel { position: relative; background: linear-gradient(180deg, #D6DCE4, #B4BDC9 60%, #C6CED8); border-radius: 18px; padding: 18px 14px 16px; color: var(--ink); box-shadow: inset 0 0 0 2px rgba(255,255,255,.35), inset 0 -3px 6px rgba(0,0,0,.12); }
+.screw { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #8E98A6, #3E4652); box-shadow: 0 0 0 1px #2A313B; }
+.screw::after { content: ""; position: absolute; left: 3px; right: 3px; top: 6px; height: 2px; background: #1B2028; transform: rotate(35deg); }
+.s1 { top: 7px; inset-inline-start: 7px; } .s2 { top: 7px; inset-inline-end: 7px; } .s3 { bottom: 7px; inset-inline-start: 7px; } .s4 { bottom: 7px; inset-inline-end: 7px; }
+.plate { display: block; width: max-content; max-width: 100%; margin: 0 auto 12px; background: var(--navy); color: #fff; border-radius: 12px; padding: 5px 22px; font-family: var(--font-d); font-weight: 600; font-size: 21px; letter-spacing: .3px; text-align: center; }
+html[dir="rtl"] .plate { font-family: var(--font-ar); font-size: 17px; }
+.sys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.sys button { background: var(--pale); border: 2px solid #5E86BF; border-radius: 12px; padding: 8px 4px 8px; min-height: 96px; color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; text-align: center; }
+.sys button.on { border-color: var(--yellow); box-shadow: 0 0 0 3px rgba(245,197,24,.55), 0 0 14px rgba(245,197,24,.55); background: #E3EFFC; }
+.sys .nm { font-family: var(--font-d); font-weight: 700; font-size: 19px; line-height: 1.05; }
+.sys .sb { font-size: 12px; line-height: 1.15; font-weight: 500; }
+html[dir="rtl"] .sys .nm { font-family: var(--font-b); font-size: 16px; }
+.sys svg { width: 52px; height: 36px; }
+.field { display: grid; grid-template-columns: 42px 1px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 0; border-top: 2px solid rgba(11,27,63,.35); }
+.field .fi { width: 38px; height: 38px; color: var(--ink); }
+.field .sep { align-self: stretch; background: rgba(11,27,63,.55); width: 1px; }
+.field label { display: block; font-family: var(--font-d); font-weight: 700; font-size: 20px; line-height: 1.1; margin-bottom: 4px; }
+html[dir="rtl"] .field label { font-family: var(--font-ar); font-size: 15px; }
+.field input { width: 100%; height: 46px; border: 2px solid #3E72C8; border-radius: 10px; background: #fff; padding: 0 12px; font-family: var(--font-m); font-size: 16px; color: var(--ink); direction: ltr; text-align: start; }
+html[dir="rtl"] .field input { text-align: left; }
+.field input::placeholder { color: #6C7A93; font-style: italic; }
+.err { grid-column: 1 / -1; color: #8A1C14; background: #FFE3DF; border-radius: 8px; padding: 6px 10px; font-size: 14px; font-weight: 600; }
+.go { width: 100%; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: linear-gradient(180deg, #FFD83D, #F5C518 60%, #E7B400); border: 2px solid #B88A00; border-radius: 16px; min-height: 66px; padding: 0 20px; color: var(--ink); font-family: var(--font-d); font-weight: 700; font-size: 36px; letter-spacing: .3px; box-shadow: 0 3px 0 #8A6A00; }
+html[dir="rtl"] .go { font-family: var(--font-ar); font-size: 26px; }
+.go svg { width: 34px; height: 34px; flex: none; }
+.go .chev { transform: none; } html[dir="rtl"] .go .chev { transform: scaleX(-1); }
+.go:active { transform: translateY(2px); box-shadow: 0 1px 0 #8A6A00; }
+.eg { margin-top: 12px; font-size: 13px; color: #1D2C4D; }
+.eg b { font-weight: 600; display: block; margin-bottom: 6px; }
+.eg .row { display: flex; flex-wrap: wrap; gap: 6px; }
+.eg button { background: rgba(255,255,255,.7); border: 1.5px solid #5E86BF; border-radius: 14px; padding: 5px 10px; min-height: 36px; font-family: var(--font-m); font-size: 12.5px; color: var(--ink); direction: ltr; }
+.eg .clr { background: transparent; border-style: dashed; font-family: inherit; }
+
+/* bottom nav */
+.nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.nav button { background: linear-gradient(180deg, #17316F, #0E2250); border: 2px solid #3A5CA8; border-radius: 14px; padding: 10px 4px 8px; min-height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; font-family: var(--font-d); font-weight: 600; font-size: 16px; line-height: 1.1; color: #fff; }
+html[dir="rtl"] .nav button { font-family: var(--font-ar); font-size: 13px; }
+.nav svg { width: 34px; height: 34px; color: var(--yellow); }
+@media (max-width: 360px) { .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.foot { margin-top: 16px; display: flex; align-items: center; gap: 12px; justify-content: center; color: var(--yellow); font-family: var(--font-d); font-style: italic; font-weight: 600; font-size: 19px; text-align: center; }
+html[dir="rtl"] .foot { font-family: var(--font-ar); font-style: normal; font-size: 15px; }
+.foot::before, .foot::after { content: ""; height: 2px; flex: 1; background: var(--yellow); opacity: .8; }
+.linkish { display: block; margin: 10px auto 0; background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; padding: 8px; min-height: 36px; }
+
+/* page titles */
+.ph1 { font-family: var(--font-d); font-size: 36px; font-weight: 700; line-height: 1; color: #fff; margin: 4px 0 6px; }
+html[dir="rtl"] .ph1 { font-family: var(--font-ar); font-size: 28px; line-height: 1.3; }
+.lead { color: var(--muted); font-size: 16px; margin-bottom: 14px; }
+.h2 { font-family: var(--font-d); font-size: 26px; font-weight: 700; color: var(--yellow); margin: 22px 0 8px; letter-spacing: .3px; text-wrap: balance; }
+html[dir="rtl"] .h2 { font-family: var(--font-ar); font-size: 20px; }
+
+/* cards */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; min-width: 0; }
+.card h3 { font-family: var(--font-d); font-size: 23px; font-weight: 700; line-height: 1.1; margin-bottom: 6px; text-wrap: balance; }
+html[dir="rtl"] .card h3 { font-family: var(--font-ar); font-size: 17px; line-height: 1.4; }
+.card p { color: #E2E9F8; }
+.card p + p { margin-top: 8px; }
+.card .mut { color: var(--muted); font-size: 14px; }
+.ill { background: var(--tile); border-radius: 12px; padding: 8px; margin: 10px 0; display: flex; justify-content: center; }
+.ill svg { width: 100%; max-width: 360px; height: auto; display: block; }
+.ico { width: 64px; height: 64px; border-radius: 14px; background: var(--tile); flex: none; display: grid; place-items: center; overflow: hidden; }
+.ico svg { width: 60px; height: 60px; }
+.chip { display: inline-block; font-family: var(--font-m); font-weight: 600; font-size: 14px; color: var(--yellow); border: 1.5px solid var(--yellow); background: var(--navy); border-radius: 8px; padding: 1px 8px; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
+.chip.big { font-size: 17px; padding: 3px 12px; }
+.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; color: #E2E9F8; }
+.list li svg { width: 20px; height: 20px; margin-top: 3px; color: var(--yellow); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl th { text-align: start; color: var(--yellow); font-weight: 600; padding: 6px 8px; border-bottom: 2px solid var(--line); }
+.tbl td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; color: #E2E9F8; }
+.tbl td:first-child { white-space: nowrap; }
+.scroll { overflow-x: auto; }
+
+/* result */
+.sysrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.pill { background: var(--yellow); color: var(--ink); font-weight: 700; font-size: 13px; padding: 2px 12px; border-radius: 12px; }
+.echo { background: var(--card); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+.echo .code { font-family: var(--font-m); font-size: 17px; color: var(--yellow); letter-spacing: .3px; overflow-wrap: anywhere; direction: ltr; text-align: start; }
+.sum { background: var(--yellow); color: var(--ink); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.sum ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.sum li { font-weight: 600; font-size: 15px; line-height: 1.4; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 6px; }
+.sum li::before { content: ""; width: 8px; height: 8px; background: var(--ink); border-radius: 2px; margin-top: 7px; }
+.zones { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; align-items: center; color: var(--muted); font-size: 14px; }
+.z { font-family: var(--font-m); font-weight: 600; font-size: 14px; padding: 2px 10px; border-radius: 10px; color: var(--ink); direction: ltr; }
+.z0, .z20 { background: #FF8A7E; } .z1, .z21 { background: #FFB066; } .z2, .z22 { background: #FFE07A; }
+.warn { border: 2px solid var(--yellow); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 14px; color: #FFF3C2; background: rgba(245,197,24,.08); }
+.warn svg { width: 22px; height: 22px; color: var(--yellow); margin-top: 1px; }
+.warn.bad { border-color: var(--danger); background: rgba(255,138,126,.08); color: #FFD9D4; } .warn.bad svg { color: var(--danger); }
+.part { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 8px; }
+.part .ph { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 4px; }
+.part .ph b { font-weight: 600; font-size: 16px; line-height: 1.25; }
+.part p { font-size: 15px; color: #E2E9F8; }
+.part details { margin-top: 6px; }
+.part summary { color: var(--yellow); font-size: 14px; font-weight: 600; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+.part details p { color: var(--muted); margin-top: 4px; }
+.ipc { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 8px; display: grid; gap: 10px; }
+.ipc .r { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: start; }
+.ipc .r small { display: block; color: var(--muted); font-size: 12.5px; }
+.ipc .r svg { width: 48px; height: 48px; background: var(--tile); border-radius: 10px; }
+.disc { border: 2px solid var(--yellow); border-radius: 12px; padding: 10px 12px; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 13.5px; color: var(--muted); margin-top: 14px; }
+.disc svg { width: 20px; height: 20px; color: var(--yellow); margin-top: 2px; }
+.btn2 { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 50px; margin-top: 12px; background: var(--card-hi); border: 2px solid var(--line); border-radius: 12px; font-weight: 600; font-size: 16px; color: #fff; }
+
+/* lessons */
+.anat { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; direction: ltr; }
+.anat button { font-family: var(--font-m); font-weight: 600; font-size: 15px; border-radius: 8px; padding: 6px 10px; min-height: 40px; border: 2px solid var(--yellow); background: var(--navy); color: var(--yellow); }
+.anat button.on { background: var(--yellow); color: var(--ink); }
+.anat-d { background: var(--navy); border-radius: 10px; padding: 10px 12px; min-height: 96px; }
+.anat-d b { display: block; margin-bottom: 2px; }
+.therm { display: grid; gap: 6px; }
+.therm .row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 62px; gap: 8px; align-items: center; font-size: 14px; }
+.therm .bar2 { height: 20px; border-radius: 6px; background: linear-gradient(90deg, #FFE07A, #FF6B5E); }
+.therm .v { font-family: var(--font-m); font-size: 13px; text-align: end; color: var(--muted); direction: ltr; }
+.digits { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; direction: ltr; }
+.digits button { width: 44px; height: 44px; border-radius: 10px; border: 2px solid var(--line); background: var(--navy); color: #fff; font-family: var(--font-m); font-weight: 600; font-size: 18px; }
+.digits button.on { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
+.big-ip { font-family: var(--font-m); font-size: 40px; font-weight: 600; color: var(--yellow); text-align: center; direction: ltr; margin: 4px 0 8px; }
+.inline { display: flex; gap: 8px; }
+.inline input { flex: 1; min-width: 0; height: 46px; border: 2px solid #3E72C8; border-radius: 10px; background: #fff; padding: 0 12px; font-family: var(--font-m); font-size: 16px; color: var(--ink); direction: ltr; }
+.inline button { min-width: 84px; height: 46px; border-radius: 10px; border: 0; background: var(--yellow); color: var(--ink); font-weight: 700; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .go, .sys button, .nav button, .digits button, .anat button { transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease; }
+}
+@media (max-width: 380px) {
+  .brand .t1 { font-size: 36px; } .brand .t2 { font-size: 54px; }
+  .go { font-size: 30px; }
+}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function (root) {
+'use strict';
+var L = function (en, ar) { return { en: en, ar: ar }; };
+
+/* ------------------------------------------------------------------ */
+/* Reference data (own wording; facts only)                            */
+/* ------------------------------------------------------------------ */
+var TEMP = { T1: 450, T2: 300, T3: 200, T4: 135, T5: 100, T6: 85 };
+var TEMP_NA = { T1: 450, T2: 300, T2A: 280, T2B: 260, T2C: 230, T2D: 215, T3: 200, T3A: 180, T3B: 165, T3C: 160, T4: 135, T4A: 120, T5: 100, T6: 85 };
+
+var ZONE = {
+  0: L('Zone 0: an explosive gas atmosphere is present all the time or for long periods.', 'المنطقة 0: الجو الغازي المتفجر موجود طوال الوقت أو لفترات طويلة.'),
+  1: L('Zone 1: an explosive gas atmosphere is likely to appear now and then during normal operation.', 'المنطقة 1: يُحتمل ظهور جو غازي متفجر من وقت لآخر أثناء التشغيل العادي.'),
+  2: L('Zone 2: an explosive gas atmosphere is not expected in normal operation, and if it appears it stays only briefly.', 'المنطقة 2: لا يُتوقع جو غازي متفجر في التشغيل العادي، وإن ظهر فلفترة قصيرة.'),
+  20: L('Zone 20: a cloud of combustible dust is present all the time or for long periods.', 'المنطقة 20: سحابة غبار قابل للاشتعال موجودة طوال الوقت أو لفترات طويلة.'),
+  21: L('Zone 21: a dust cloud is likely to appear now and then during normal operation.', 'المنطقة 21: يُحتمل ظهور سحابة غبار من وقت لآخر أثناء التشغيل العادي.'),
+  22: L('Zone 22: a dust cloud is not expected in normal operation, and if it appears it stays only briefly.', 'المنطقة 22: لا يُتوقع ظهور سحابة غبار في التشغيل العادي، وإن ظهرت فلفترة قصيرة.')
+};
+
+var GAS = {
+  'I': { t: L('Gas group I (mines)', 'مجموعة الغاز I (المناجم)'), x: L('Equipment for underground coal mines, where methane (firedamp) is the main danger.', 'معدات لمناجم الفحم الجوفية، حيث يكون غاز الميثان (الغاز الحارق) هو الخطر الرئيسي.'), m: L('Mining equipment has its own rules, separate from the surface industry groups IIA, IIB and IIC.', 'لمعدات المناجم قواعدها الخاصة، المنفصلة عن مجموعات الصناعات السطحية IIA وIIB وIIC.') },
+  'II': { t: L('Gas group II', 'مجموعة الغاز II'), x: L('Equipment for gases in surface industries. The letter (A, B, C) is not given here, so the marking covers the general case.', 'معدات للغازات في الصناعات السطحية. لم يُذكر الحرف (A أو B أو C)، فالعلامة تشير إلى الحالة العامة.'), m: L('Types such as e, n and ec are often marked with plain II because they do not depend on how easily the gas ignites.', 'أنواع مثل e وn وec تُكتب غالبًا بـ II فقط لأنها لا تعتمد على سهولة اشتعال الغاز.') },
+  'IIA': { t: L('Gas group IIA', 'مجموعة الغاز IIA'), x: L('The least easily ignited gas group. Typical gases: propane and many solvents and fuels.', 'أقل مجموعات الغاز قابلية للاشتعال. أمثلتها: البروبان وكثير من المذيبات والوقود.'), m: L('IIA equipment can only be used with IIA gases.', 'معدات IIA تُستخدم مع غازات IIA فقط.') },
+  'IIB': { t: L('Gas group IIB', 'مجموعة الغاز IIB'), x: L('A more easily ignited group. Typical gas: ethylene.', 'مجموعة أسهل اشتعالًا. من أمثلتها غاز الإيثيلين.'), m: L('IIB equipment also suits IIA gases.', 'معدات IIB تناسب أيضًا غازات IIA.') },
+  'IIB+H2': { t: L('Gas group IIB + H2', 'مجموعة الغاز IIB + H2'), x: L('Covers IIB gases and also hydrogen.', 'تشمل غازات IIB وكذلك الهيدروجين.'), m: L('It sits between IIB and IIC.', 'تقع بين IIB وIIC.') },
+  'IIC': { t: L('Gas group IIC', 'مجموعة الغاز IIC'), x: L('The most easily ignited gas group. Typical gases: hydrogen and acetylene.', 'أسهل مجموعات الغاز اشتعالًا. من أمثلتها الهيدروجين والأسيتيلين.'), m: L('IIC equipment also suits IIB and IIA gases.', 'معدات IIC تناسب أيضًا غازات IIB وIIA.') }
+};
+var DUST = {
+  'IIIA': { t: L('Dust group IIIA', 'مجموعة الغبار IIIA'), x: L('Combustible flyings: light fibers such as cotton lint or sawdust fluff.', 'ألياف متطايرة قابلة للاشتعال، مثل زغب القطن ونشارة الخشب الخفيفة.'), m: L('Equipment for IIIA only.', 'معدات لـ IIIA فقط.') },
+  'IIIB': { t: L('Dust group IIIB', 'مجموعة الغبار IIIB'), x: L('Non-conductive dust, such as grain, flour, wood and plastic powders.', 'غبار غير موصل للكهرباء، مثل الحبوب والدقيق والخشب ومساحيق البلاستيك.'), m: L('IIIB equipment also suits IIIA.', 'معدات IIIB تناسب أيضًا IIIA.') },
+  'IIIC': { t: L('Dust group IIIC', 'مجموعة الغبار IIIC'), x: L('Conductive dust, such as metal powders and carbon.', 'غبار موصل للكهرباء، مثل مساحيق المعادن والكربون.'), m: L('IIIC equipment also suits IIIB and IIIA.', 'معدات IIIC تناسب أيضًا IIIB وIIIA.') }
+};
+
+var CAT = {
+  'M1': { t: L('Category M1', 'الفئة M1'), x: L('Very high protection for mines. The equipment can keep working even when firedamp is present.', 'حماية عالية جدًا للمناجم. يمكن للمعدة أن تستمر في العمل حتى مع وجود الغاز الحارق.') },
+  'M2': { t: L('Category M2', 'الفئة M2'), x: L('High protection for mines. The equipment must be switched off when firedamp is present.', 'حماية عالية للمناجم. يجب فصل المعدة عند وجود الغاز الحارق.') },
+  '1': { t: L('Category 1', 'الفئة 1'), x: L('Very high protection. The equipment stays safe even with rare faults. For the most hazardous areas: Zone 0 (gas) or Zone 20 (dust).', 'حماية عالية جدًا. تبقى المعدة آمنة حتى مع الأعطال النادرة. للمناطق الأشد خطورة: المنطقة 0 (غاز) أو 20 (غبار).') },
+  '2': { t: L('Category 2', 'الفئة 2'), x: L('High protection. The equipment stays safe in normal operation and with faults that are expected. For Zone 1 (gas) or Zone 21 (dust).', 'حماية عالية. تبقى المعدة آمنة في التشغيل العادي ومع الأعطال المتوقعة. للمنطقة 1 (غاز) أو 21 (غبار).') },
+  '3': { t: L('Category 3', 'الفئة 3'), x: L('Normal protection. The equipment is safe in normal operation. For Zone 2 (gas) or Zone 22 (dust).', 'حماية عادية. المعدة آمنة في التشغيل العادي. للمنطقة 2 (غاز) أو 22 (غبار).') }
+};
+
+var EPL = {
+  Ga: { t: L('Protection level Ga', 'مستوى الحماية Ga'), x: L('Very high protection for gas. Suits Zone 0, and also Zones 1 and 2.', 'حماية عالية جدًا للغاز. يناسب المنطقة 0، وكذلك المنطقتين 1 و2.'), z: [0, 1, 2] },
+  Gb: { t: L('Protection level Gb', 'مستوى الحماية Gb'), x: L('High protection for gas. Suits Zone 1, and also Zone 2.', 'حماية عالية للغاز. يناسب المنطقة 1، وكذلك المنطقة 2.'), z: [1, 2] },
+  Gc: { t: L('Protection level Gc', 'مستوى الحماية Gc'), x: L('Enhanced protection for gas. Suits Zone 2.', 'حماية معززة للغاز. يناسب المنطقة 2.'), z: [2] },
+  Da: { t: L('Protection level Da', 'مستوى الحماية Da'), x: L('Very high protection for dust. Suits Zone 20, and also Zones 21 and 22.', 'حماية عالية جدًا للغبار. يناسب المنطقة 20، وكذلك المنطقتين 21 و22.'), z: [20, 21, 22] },
+  Db: { t: L('Protection level Db', 'مستوى الحماية Db'), x: L('High protection for dust. Suits Zone 21, and also Zone 22.', 'حماية عالية للغبار. يناسب المنطقة 21، وكذلك المنطقة 22.'), z: [21, 22] },
+  Dc: { t: L('Protection level Dc', 'مستوى الحماية Dc'), x: L('Enhanced protection for dust. Suits Zone 22.', 'حماية معززة للغبار. يناسب المنطقة 22.'), z: [22] },
+  Ma: { t: L('Protection level Ma', 'مستوى الحماية Ma'), x: L('Very high protection for mines. Can stay energized in a firedamp atmosphere.', 'حماية عالية جدًا للمناجم. يمكن أن تبقى تحت الجهد في جو الغاز الحارق.'), z: [] },
+  Mb: { t: L('Protection level Mb', 'مستوى الحماية Mb'), x: L('High protection for mines. Must be de-energized when firedamp is present.', 'حماية عالية للمناجم. يجب فصلها عن الجهد عند وجود الغاز الحارق.'), z: [] }
+};
+var RANK = { a: 3, b: 2, c: 1 };
+
+var PROT = {
+  d: { icon: 'd', n: L('Flameproof enclosure', 'غلاف مقاوم للّهب'),
+    x: L('The housing is strong enough to contain an explosion inside, and its joints cool any flame that escapes, so the gas outside is not ignited.', 'الغلاف قوي بما يكفي لاحتواء أي انفجار داخله، وتبرّد وصلاته أي لهب يخرج منه فلا يشتعل الغاز في الخارج.'),
+    m: L('Typical use: motors, switchgear, light fittings and junction boxes. Do not open it while the circuit is live or the area is hazardous.', 'الاستخدام المعتاد: المحركات ولوحات التوزيع وكشافات الإنارة وصناديق التوصيل. لا تفتحه والدائرة تحت الجهد أو المنطقة خطرة.') },
+  e: { icon: 'e', n: L('Increased safety', 'أمان مُعزَّز'),
+    x: L('Extra care in design and building keeps sparks, arcs and hot spots from appearing during normal running.', 'عناية إضافية في التصميم والتصنيع تمنع ظهور الشرر والأقواس الكهربائية والنقاط الساخنة أثناء التشغيل العادي.'),
+    m: L('Typical use: terminal boxes, motors and lights. Often combined with d, for example Ex db eb: a flameproof main chamber with an increased-safety terminal box.', 'الاستخدام المعتاد: صناديق التوصيل والمحركات والإنارة. يُدمج كثيرًا مع d، مثل Ex db eb: حجرة رئيسية مقاومة للّهب مع صندوق توصيل بأمان مُعزَّز.') },
+  i: { icon: 'i', n: L('Intrinsic safety', 'أمان ذاتي'),
+    x: L('The circuit carries so little energy that no spark or heat can ignite the gas, even when a fault happens.', 'الدائرة تحمل طاقة ضئيلة جدًا بحيث لا يستطيع أي شرر أو حرارة إشعال الغاز، حتى عند حدوث عطل.'),
+    m: L('Typical use: sensors, transmitters and instrument loops. The whole loop, including the barrier and the cable, has to be matched.', 'الاستخدام المعتاد: الحساسات والمرسِلات وحلقات القياس. يجب أن تتوافق الحلقة كلها، بما فيها الحاجز والكابل.') },
+  m: { icon: 'm', n: L('Encapsulation', 'تغليف بالمركّب'),
+    x: L('Parts that could spark or get hot are sealed in solid compound, so the gas cannot reach them.', 'الأجزاء التي قد تُولّد شررًا أو حرارة مغلّفة بمادة صلبة، فلا يصل إليها الغاز.'),
+    m: L('Typical use: small electronics, solenoid coils and sensors.', 'الاستخدام المعتاد: الإلكترونيات الصغيرة وملفات الصمامات والحساسات.') },
+  o: { icon: 'o', n: L('Oil immersion', 'الغمر بالزيت'),
+    x: L('Live parts sit under oil, which keeps flammable gas away from any spark.', 'الأجزاء الكهربائية مغمورة بالزيت، مما يُبعد الغاز القابل للاشتعال عن أي شرر.'),
+    m: L('Less common today. Seen in some transformers and switchgear.', 'أقل شيوعًا اليوم. تُرى في بعض المحولات ولوحات التوزيع.') },
+  p: { icon: 'p', n: L('Pressurized enclosure', 'غلاف مضغوط'),
+    x: L('Clean air or inert gas is kept at a slightly higher pressure inside the enclosure, which keeps the hazardous atmosphere out.', 'يُحفظ هواء نظيف أو غاز خامل بضغط أعلى قليلًا داخل الغلاف، مما يمنع دخول الجو الخطر.'),
+    m: L('Typical use: large motors, analyzers and control cabinets. A purge before start-up and pressure monitoring are required.', 'الاستخدام المعتاد: المحركات الكبيرة وأجهزة التحليل ولوحات التحكم. يلزم طرد الهواء قبل التشغيل ومراقبة الضغط.') },
+  q: { icon: 'q', n: L('Powder filling', 'التعبئة بالمسحوق'),
+    x: L('The enclosure is filled with fine powder, such as quartz sand, that smothers any arc.', 'يُملأ الغلاف بمسحوق ناعم مثل رمل الكوارتز يُطفئ أي قوس كهربائي.'),
+    m: L('Typical use: capacitors and some electronic modules.', 'الاستخدام المعتاد: المكثفات وبعض الوحدات الإلكترونية.') },
+  n: { icon: 'n', n: L('Type n (non-sparking, Zone 2)', 'النوع n (غير مولّد للشرر، للمنطقة 2)'),
+    x: L('An older scheme for Zone 2 equipment that does not spark or get hot enough to ignite gas in normal operation.', 'نظام أقدم لمعدات المنطقة 2 لا تُولّد شررًا ولا حرارة كافية لإشعال الغاز في التشغيل العادي.'),
+    m: L('Newer equipment uses Ex ec or Ex ic instead.', 'المعدات الأحدث تستخدم Ex ec أو Ex ic بدلًا منه.') },
+  t: { icon: 't', n: L('Dust protection by enclosure', 'حماية من الغبار بالغلاف'),
+    x: L('A dust-tight enclosure keeps dust out and limits the surface temperature, so dust cannot ignite.', 'غلاف محكم ضد الغبار يمنع دخوله ويحدّ من حرارة السطح، فلا يشتعل الغبار.'),
+    m: L('Used where combustible dust is present. The letter after t shows the level: ta, tb or tc.', 'يُستخدم حيث يوجد غبار قابل للاشتعال. الحرف بعد t يدل على المستوى: ta أو tb أو tc.') },
+  op: { icon: 'op', n: L('Optical radiation protection', 'حماية من الإشعاع الضوئي'),
+    x: L('Light from lasers or LEDs is limited so it cannot ignite the atmosphere.', 'يُحدّ من الضوء الصادر عن الليزر أو الـ LED فلا يستطيع إشعال الجو المحيط.'),
+    m: L('Suffixes: is (inherently safe), pr (protected), sh (shutdown).', 'اللواحق: is (آمن بطبيعته) وpr (محمي) وsh (إيقاف عند الخطر).') },
+  s: { icon: 's', n: L('Special protection', 'حماية خاصة'),
+    x: L('A method outside the standard types, approved case by case.', 'طريقة خارج الأنواع القياسية، تُعتمد حالة بحالة.'),
+    m: L('Mostly seen on older equipment.', 'تظهر غالبًا على المعدات الأقدم.') },
+  h: { icon: 'h', n: L('Non-electrical protection', 'حماية للمعدات غير الكهربائية'),
+    x: L('Mechanical equipment, such as pumps and gearboxes, made safe by its construction or by controlling ignition sources.', 'معدات ميكانيكية مثل المضخات وصناديق التروس، مؤمَّنة بتصميمها أو بالتحكم في مصادر الاشتعال.'),
+    m: L('', '') }
+};
+var SUB = {
+  px: L('px: pressurization that makes the inside non-hazardous.', 'px: ضغط يجعل الداخل غير خطر.'),
+  py: L('py: pressurization that lowers the inside from Zone 1 to Zone 2.', 'py: ضغط يخفّض الداخل من المنطقة 1 إلى المنطقة 2.'),
+  pz: L('pz: pressurization that lowers the inside from Zone 2 to non-hazardous.', 'pz: ضغط يخفّض الداخل من المنطقة 2 إلى غير خطر.'),
+  nA: L('nA: non-sparking equipment.', 'nA: معدات لا تُولّد شررًا.'),
+  nC: L('nC: sparking parts that are protected.', 'nC: أجزاء تُولّد شررًا لكنها محمية.'),
+  nR: L('nR: restricted breathing enclosure.', 'nR: غلاف محدود التنفس.'),
+  nL: L('nL: limited energy.', 'nL: طاقة محدودة.'),
+  nZ: L('nZ: pressurized (older scheme).', 'nZ: مضغوط (نظام قديم).')
+};
+var LVL_GAS = {
+  a: L('Level a: very high protection. Suits Zone 0, and also Zones 1 and 2.', 'المستوى a: حماية عالية جدًا. يناسب المنطقة 0، وكذلك المنطقتين 1 و2.'),
+  b: L('Level b: high protection. Suits Zone 1, and also Zone 2.', 'المستوى b: حماية عالية. يناسب المنطقة 1، وكذلك المنطقة 2.'),
+  c: L('Level c: enhanced protection. Suits Zone 2.', 'المستوى c: حماية معززة. يناسب المنطقة 2.')
+};
+var LVL_DUST = {
+  a: L('Level a: very high protection. Suits Zone 20, and also Zones 21 and 22.', 'المستوى a: حماية عالية جدًا. يناسب المنطقة 20، وكذلك المنطقتين 21 و22.'),
+  b: L('Level b: high protection. Suits Zone 21, and also Zone 22.', 'المستوى b: حماية عالية. يناسب المنطقة 21، وكذلك المنطقة 22.'),
+  c: L('Level c: enhanced protection. Suits Zone 22.', 'المستوى c: حماية معززة. يناسب المنطقة 22.')
+};
+
+/* ------------------------------------------------------------------ */
+/* helpers                                                             */
+/* ------------------------------------------------------------------ */
+function joinOr(arr, lang) {
+  var w = lang === 'ar' ? ' أو ' : ' or ';
+  if (arr.length < 2) return arr.join('');
+  if (lang === 'ar') return arr.join(' أو ');
+  return arr.slice(0, -1).join(', ') + w + arr[arr.length - 1];
+}
+function cat2(a, b) { return L(a.en + ' ' + b.en, a.ar + ' ' + b.ar); }
+function uniq(a) { var o = []; a.forEach(function (x) { if (o.indexOf(x) < 0) o.push(x); }); return o; }
+
+var PROT_TOKS = ['pxb', 'pyb', 'pzc', 'ia', 'ib', 'ic', 'ma', 'mb', 'mc', 'da', 'db', 'dc', 'eb', 'ec', 'ob', 'oc', 'qb', 'ta', 'tb', 'tc', 'px', 'py', 'pz', 'na', 'nc', 'nr', 'nl', 'nz', 'op', 'd', 'e', 'i', 'm', 'o', 'p', 'q', 'n', 't', 's', 'h'];
+var MULTI_OK = ['d', 'e', 'i', 'm', 'o', 'p', 'q', 'n'];
+function mkProt(h) {
+  var base = h.charAt(0), level = null, sub = null;
+  if (h === 'op') base = 'op';
+  else if (base === 'n' && h.length === 2) sub = h.charAt(1).toUpperCase();
+  else if (h.length === 2) level = h.charAt(1);
+  else if (h.length === 3) { sub = h.charAt(1); level = h.charAt(2); }
+  if (base === 'p' && h.length === 2 && 'xyz'.indexOf(h.charAt(1)) > -1) { sub = h.charAt(1); level = null; }
+  if (base === 'p' && sub) { if (!level) level = sub === 'z' ? 'c' : 'b'; }
+  if (base === 'p' && h.length === 1) { level = null; }
+  var code = base === 'n' && sub ? 'n' + sub : h;
+  return { raw: h, base: base, sub: sub, level: level, code: code };
+}
+function splitProt(tok) {
+  var s = tok.toLowerCase(), out = [];
+  while (s.length) {
+    var hit = null;
+    for (var k = 0; k < PROT_TOKS.length; k++) { if (s.indexOf(PROT_TOKS[k]) === 0) { hit = PROT_TOKS[k]; break; } }
+    if (!hit) return null;
+    out.push(mkProt(hit)); s = s.slice(hit.length);
+  }
+  if (out.length > 3) return null;
+  if (out.length > 1) {
+    for (var j = 0; j < out.length; j++) { if (MULTI_OK.indexOf(out[j].base) < 0 || out[j].base === 'op') return null; }
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ */
+/* Ex marking parser (ATEX, IECEx, and the Ex part of NEC/CEC)         */
+/* ------------------------------------------------------------------ */
+function parseMarking(raw, opts) {
+  opts = opts || {};
+  var info = { atmos: {}, zones: [], cats: [], epl: [], prot: [], gas: [], dust: [], tempClass: null, tempC: null, ambient: null, ip: [] };
+  var parts = [], warnings = [], unknown = [];
+  var s = String(raw || '');
+  var assocInner = null, assocCat = null;
+  var bm = /\[([^\]]*)\]/.exec(s);
+  var assoc = !!bm || /\[/.test(s);
+  if (bm) {
+    var ie = /\b([GDM][abc])\b/.exec(bm[1]);
+    assocInner = ie ? ie[1] : null;
+    s = s.replace(bm[0], ' ' + bm[1].replace(/\b[GDM][abc]\b/g, ' ') + ' ');
+  }
+  s = s.replace(/([123])\s*\(\s*([123])\s*\)\s*(GD|DG|G|D)/gi, function (_, a, b, c) { assocCat = b; return ' ' + a + c + ' '; });
+  s = s.replace(/[<>⟨⟩〈〉(){}\[\]]/g, ' ').replace(/[,;]/g, ' ');
+  s = s.replace(/\s*°\s*C/gi, '°C').replace(/\bT\s+(\d{2,3})/g, 'T$1');
+
+  var m;
+  var amb = [
+    /(-?\+?\d{1,3})\s*°?\s*C?\s*(?:≤|<=|=<|<)\s*T(?:a|amb)\s*(?:≤|<=|=<|<)\s*\+?\s*(\d{1,3})\s*°?\s*C?/i,
+    /T(?:a|amb)\s*[:=]?\s*(-?\+?\d{1,3})\s*°?\s*C?\s*(?:to|\.{2,3}|…|–|—|~)\s*\+?\s*(\d{1,3})\s*°?\s*C?/i
+  ];
+  for (var a = 0; a < amb.length; a++) {
+    m = amb[a].exec(s);
+    if (m) { info.ambient = { min: parseInt(m[1], 10), max: parseInt(m[2], 10) }; s = s.replace(m[0], ' '); break; }
+  }
+  if (!info.ambient) {
+    m = /T(?:a|amb)\s*(?:≤|<=|=<|<)\s*\+?\s*(\d{1,3})\s*°?\s*C?/i.exec(s);
+    if (m) { info.ambient = { min: null, max: parseInt(m[1], 10) }; s = s.replace(m[0], ' '); }
+  }
+
+  var tk = [];
+  s.split(/\s+/).filter(Boolean).forEach(function (t) {
+    var g = /^(II|I)(M[12]|[123](?:G|D|GD|DG)?)$/i.exec(t);
+    if (g) { tk.push(g[1]); tk.push(g[2]); } else tk.push(t);
+  });
+
+  var state = 'pre', exSeen = false, last = '', pendingCat = null;
+
+  function add(p) { parts.push(p); last = p.kind; }
+
+  function addProt(p) {
+    var b = PROT[p.base]; if (!b) return false;
+    var isDust = p.base === 't';
+    var lvl = p.level ? (isDust ? LVL_DUST[p.level] : LVL_GAS[p.level]) : null;
+    var title = p.level ? L(b.n.en + ', level ' + p.level, b.n.ar + '، المستوى ' + p.level) : b.n;
+    var text = lvl ? cat2(b.x, lvl) : b.x;
+    var key = p.base === 'p' && p.sub ? 'p' + p.sub : (p.base === 'n' && p.sub ? 'n' + p.sub : null);
+    var more = b.m;
+    if (key && SUB[key]) more = L(SUB[key].en + (more.en ? ' ' + more.en : ''), SUB[key].ar + (more.ar ? ' ' + more.ar : ''));
+    add({ kind: 'prot', code: p.code, title: title, text: text, more: more, icon: b.icon });
+    info.prot.push(p);
+    if (isDust) info.atmos.D = 1;
+    return true;
+  }
+
+  function addGroup(g) {
+    var up = g.toUpperCase();
+    if (up === 'IIB+H2') up = 'IIB+H2';
+    var d = GAS[up] || DUST[up];
+    if (!d) return false;
+    var dust = !!DUST[up];
+    add({ kind: dust ? 'dust' : 'gas', code: up, title: d.t, text: d.x, more: d.m, icon: dust ? 'dust' : (up === 'I' ? 'group1' : 'gas') });
+    if (dust) { info.dust.push(up); info.atmos.D = 1; } else { info.gas.push(up); info.atmos[up === 'I' ? 'M' : 'G'] = 1; }
+    return true;
+  }
+
+  function addTemp(t) {
+    var c = /^T([1-6])$/i.exec(t);
+    if (c) {
+      var k = 'T' + c[1], v = TEMP[k];
+      info.tempClass = k; info.tempC = v;
+      add({ kind: 'temp', code: k, title: L('Temperature class ' + k, 'فئة الحرارة ' + k), text: L('The surface of the equipment never gets hotter than ' + v + '°C.', 'لا تتجاوز حرارة سطح المعدة ' + v + '°م أبدًا.'), more: L('The gas in your area must ignite at a higher temperature than this. T1 is the hottest class (450°C) and T6 the coolest (85°C).', 'يجب أن يشتعل الغاز في منطقتك عند حرارة أعلى من هذه. T1 أعلى فئة حرارة (450°م) وT6 أدناها (85°م).'), icon: 'temp', arg: String(v) });
+      return true;
+    }
+    c = /^T(\d{2,3})(?:°C|C)?$/i.exec(t);
+    if (c) {
+      var v2 = parseInt(c[1], 10); info.tempC = v2;
+      add({ kind: 'temp', code: 'T' + v2 + '°C', title: L('Maximum surface temperature ' + v2 + '°C', 'أقصى حرارة للسطح ' + v2 + '°م'), text: L('The surface of the equipment never gets hotter than ' + v2 + '°C.', 'لا تتجاوز حرارة سطح المعدة ' + v2 + '°م أبدًا.'), more: L('For dust, keep this value well below the ignition temperature of both a dust cloud and a dust layer. Check the data for your dust.', 'بالنسبة للغبار، يجب أن تبقى هذه القيمة أقل بكثير من حرارة اشتعال سحابة الغبار وطبقة الغبار. راجع بيانات الغبار الخاص بك.'), icon: 'temp', arg: String(v2) });
+      return true;
+    }
+    return false;
+  }
+
+  function addEpl(t) {
+    var k = t.charAt(0).toUpperCase() + t.charAt(1).toLowerCase();
+    var d = EPL[k]; if (!d) return false;
+    info.epl.push(k); info.atmos[k.charAt(0)] = 1;
+    add({ kind: 'epl', code: k, title: d.t, text: d.x, more: L('EPL means Equipment Protection Level. It states how safe the equipment is, whatever the protection type.', 'EPL تعني مستوى حماية المعدة. وهي تبيّن مدى أمان المعدة بصرف النظر عن نوع الحماية.'), icon: 'epl', arg: k });
+    return true;
+  }
+
+  for (var i = 0; i < tk.length; i++) {
+    var t = tk[i], up = t.toUpperCase(), n;
+
+    if (up === 'CE') { add({ kind: 'ce', code: 'CE', title: L('CE mark', 'علامة CE'), text: L('The maker declares the product meets the EU rules that apply to it. For explosion-protected equipment that is the ATEX directive.', 'يعلن المصنّع أن المنتج يستوفي قواعد الاتحاد الأوروبي المنطبقة عليه. وبالنسبة لمعدات الحماية من الانفجار فهي توجيه ATEX.'), more: L('', ''), icon: 'ce' }); continue; }
+    if (last === 'ce' && /^\d{4}$/.test(t)) { add({ kind: 'nb', code: t, title: L('Notified body number', 'رقم الجهة المبلَّغ عنها'), text: L('A four-digit number next to CE. It identifies the body that checks the quality system of the maker.', 'رقم من أربع خانات بجوار CE. يحدد الجهة التي تراجع نظام الجودة لدى المصنّع.'), more: L('', ''), icon: 'cert' }); continue; }
+
+    if (/^(EX|EEX|AEX)$/.test(up)) {
+      exSeen = true; state = 'prot';
+      var tx = up === 'AEX' ? L('AEx: the US form of Ex, used with the NEC zone system. It means the equipment is explosion-protected.', 'AEx: الصيغة الأمريكية لـ Ex، وتُستخدم مع نظام المناطق في NEC. وتعني أن المعدة محمية من الانفجار.')
+        : up === 'EEX' ? L('EEx: the older European form of Ex. It means the equipment is explosion-protected.', 'EEx: الصيغة الأوروبية الأقدم لـ Ex. وتعني أن المعدة محمية من الانفجار.')
+          : L('The Ex mark shows the equipment is built and certified for explosive atmospheres, following the IEC 60079 series.', 'علامة Ex تدل على أن المعدة مصنوعة ومعتمدة للأجواء المتفجرة، وفق سلسلة IEC 60079.');
+      add({ kind: 'ex', code: t, title: L('Explosion-protected equipment', 'معدة محمية من الانفجار'), text: tx, more: L('', ''), icon: 'ex' });
+      continue;
+    }
+
+    if (state === 'pre') {
+      if (up === 'I' || up === 'II') {
+        add({ kind: 'grp', code: up, title: up === 'II' ? L('Equipment group II', 'مجموعة المعدات II') : L('Equipment group I', 'مجموعة المعدات I'), text: up === 'II' ? L('For places above ground with explosive gas or dust, such as oil and gas, chemicals, paint and grain.', 'لأماكن فوق الأرض فيها غاز أو غبار متفجر، مثل النفط والغاز والكيماويات والدهانات والحبوب.') : L('For underground mines at risk from firedamp and coal dust.', 'للمناجم الجوفية المعرّضة لخطر الغاز الحارق وغبار الفحم.'), more: L('', ''), icon: up === 'II' ? 'group2' : 'group1' });
+        if (up === 'I') info.atmos.M = 1;
+        continue;
+      }
+      if ((n = /^(M1|M2|[123])(G|D|GD|DG)?$/i.exec(t))) {
+        var ck = n[1].toUpperCase(), at = n[2] ? n[2].toUpperCase() : '';
+        var cd = CAT[ck];
+        var cp = { kind: 'cat', code: t, title: cd.t, text: cd.x, more: L('', ''), icon: 'cat', arg: ck };
+        info.cats.push({ k: ck, at: at });
+        if (at) {
+          var atTxt = at === 'G' ? L('G means gas, vapor or mist.', 'الحرف G يعني غازًا أو بخارًا أو رذاذًا.') : at === 'D' ? L('D means dust.', 'الحرف D يعني غبارًا.') : L('G and D mean it is built for both gas and dust.', 'الحرفان G وD يعنيان أنها مصنوعة للغاز والغبار معًا.');
+          cp.more = atTxt;
+          if (at.indexOf('G') > -1) info.atmos.G = 1;
+          if (at.indexOf('D') > -1) info.atmos.D = 1;
+          add(cp); pendingCat = null;
+        } else { add(cp); pendingCat = cp; if (ck.charAt(0) === 'M') info.atmos.M = 1; }
+        continue;
+      }
+      if (pendingCat && /^(G|D|GD|DG)$/i.test(t)) {
+        var A = t.toUpperCase();
+        pendingCat.code = pendingCat.code + A;
+        pendingCat.more = A === 'G' ? L('G means gas, vapor or mist.', 'الحرف G يعني غازًا أو بخارًا أو رذاذًا.') : A === 'D' ? L('D means dust.', 'الحرف D يعني غبارًا.') : L('G and D mean it is built for both gas and dust.', 'الحرفان G وD يعنيان أنها مصنوعة للغاز والغبار معًا.');
+        info.cats[info.cats.length - 1].at = A;
+        if (A.indexOf('G') > -1) info.atmos.G = 1;
+        if (A.indexOf('D') > -1) info.atmos.D = 1;
+        pendingCat = null; continue;
+      }
+      // user forgot the Ex symbol: fall through into the protection state
+      if (splitProt(t) || /^(IIA|IIB|IIC|IIIA|IIIB|IIIC)$/i.test(t) || /^T\d/i.test(t)) {
+        state = 'prot';
+        warnings.push(L('No "Ex" symbol was found, so the app read the rest as the protection part.', 'لم يتم العثور على الرمز "Ex"، فقرأ التطبيق الباقي على أنه جزء الحماية.'));
+      } else { unknown.push(t); continue; }
+    }
+
+    /* after Ex */
+    var gm = /^(IIB\+H2|IIIA|IIIB|IIIC|IIA|IIB|IIC)$/i.exec(t);
+    if (gm) { addGroup(gm[1]); state = 'post'; continue; }
+    if (t === 'I') { addGroup('I'); state = 'post'; continue; }
+    if (up === 'II' && state !== 'pre') { addGroup('II'); state = 'post'; continue; }
+    if (/^T([1-6]|\d{2,3})(°C|C)?$/i.test(t)) { addTemp(t); state = 'post'; continue; }
+    if (/^IP\s?[0-6X][0-9X]/i.test(t)) { info.ip.push(t); continue; }
+    if (up === 'X') { add({ kind: 'x', code: 'X', title: L('Special conditions of use', 'شروط خاصة للاستخدام'), text: L('The certificate lists special conditions for safe use. Read them before installing.', 'تذكر الشهادة شروطًا خاصة للاستخدام الآمن. اقرأها قبل التركيب.'), more: L('', ''), icon: 'x' }); continue; }
+    if (up === 'U' && state === 'post') { add({ kind: 'u', code: 'U', title: L('Component', 'مكوّن'), text: L('This is a component, not a complete piece of equipment. It needs to be built into something that is itself certified.', 'هذا مكوّن وليس معدة كاملة. يجب تركيبه داخل شيء معتمد بدوره.'), more: L('', ''), icon: 'u' }); continue; }
+    if (state === 'prot' && /^[GDM][abc]$/.test(t)) { addEpl(t); continue; }
+    if (state === 'post' && /^[GDM][abc]$/i.test(t)) { addEpl(t); continue; }
+    if (state === 'prot') {
+      if (up === 'OP') {
+        var nx = (tk[i + 1] || '').toLowerCase();
+        if (nx === 'is' || nx === 'pr' || nx === 'sh') { i++; }
+        var po = mkProt('op'); po.code = 'op' + (nx === 'is' || nx === 'pr' || nx === 'sh' ? ' ' + nx : '');
+        addProt(po); continue;
+      }
+      if (t.indexOf('/') > -1) {
+        var sp = t.split('/'), okAll = true, lst = [];
+        sp.forEach(function (z) { var r = splitProt(z); if (!r) okAll = false; else lst = lst.concat(r); });
+        if (okAll) { lst.forEach(addProt); continue; }
+      }
+      var sp2 = (t === 'I') ? null : splitProt(t);
+      if (sp2) { sp2.forEach(addProt); continue; }
+    }
+    unknown.push(t);
+  }
+
+  if (assoc) {
+    var innerTxt = L('', ''), innerMore = L('', '');
+    if (assocInner && EPL[assocInner]) {
+      var iz = EPL[assocInner].z;
+      innerTxt = L(' The protected circuit is level ' + assocInner + ', so it can lead into ' + (iz.length ? 'Zone ' + iz[0] : 'a mine') + (iz.length > 1 ? ' and the zones below it' : '') + '.', ' الدائرة المحمية بمستوى ' + assocInner + '، فيمكنها الدخول إلى ' + (iz.length ? 'المنطقة ' + iz[0] : 'منجم') + (iz.length > 1 ? ' والمناطق الأقل خطورة' : '') + '.');
+    }
+    parts.push({ kind: 'assoc', code: '[ ]', title: L('Associated apparatus', 'معدات مرتبطة'), text: L('Brackets around the protection type mean associated apparatus, such as a barrier. It protects intrinsically safe circuits and normally sits in the safe area.' + innerTxt.en, 'الأقواس حول نوع الحماية تعني معدات مرتبطة، مثل الحاجز. وهي تحمي دوائر الأمان الذاتي وتوضع عادة في المنطقة الآمنة.' + innerTxt.ar), more: innerMore, icon: 'assoc' });
+  }
+  if (assocCat) {
+    parts.push({ kind: 'assoc', code: '(' + assocCat + ')', title: L('Circuits that reach Category ' + assocCat, 'دوائر تصل إلى الفئة ' + assocCat), text: L('The number in brackets shows that the circuits of this equipment can connect to Category ' + assocCat + ' equipment, which sits in a more hazardous zone.', 'الرقم بين القوسين يبيّن أن دوائر هذه المعدة يمكن توصيلها بمعدات الفئة ' + assocCat + '، التي تكون في منطقة أشد خطورة.'), more: L('', ''), icon: 'assoc' });
+  }
+  if (info.ambient) {
+    var am = info.ambient;
+    parts.push({ kind: 'amb', code: am.min === null ? 'Ta ≤ +' + am.max : am.min + '…+' + am.max + '°C', title: L('Ambient temperature range', 'مدى حرارة المحيط'), text: am.min === null ? L('Rated for ambient temperatures up to +' + am.max + '°C.', 'مصمَّمة لحرارة محيط تصل إلى +' + am.max + '°م.') : L('Rated for ambient temperatures from ' + am.min + '°C to +' + am.max + '°C. Outside this range the protection is not guaranteed.', 'مصمَّمة لحرارة محيط من ' + am.min + '°م إلى +' + am.max + '°م. خارج هذا المدى لا تُضمن الحماية.'), more: L('', ''), icon: 'temp', arg: 'Ta' });
+  }
+
+  /* zones */
+  var zs = [];
+  info.epl.forEach(function (k) { zs = zs.concat(EPL[k].z); });
+  if (!zs.length) {
+    info.cats.forEach(function (c) {
+      var d = c.at.indexOf('D') > -1, g = c.at.indexOf('G') > -1 || !c.at;
+      if (c.k === '1') { if (g) zs = zs.concat([0, 1, 2]); if (d) zs = zs.concat([20, 21, 22]); }
+      if (c.k === '2') { if (g) zs = zs.concat([1, 2]); if (d) zs = zs.concat([21, 22]); }
+      if (c.k === '3') { if (g) zs = zs.concat([2]); if (d) zs = zs.concat([22]); }
+    });
+  }
+  zs = uniq(zs).sort(function (x, y) { return x - y; });
+  info.zones = zs;
+
+  /* checks */
+  var epRank = {};
+  info.epl.forEach(function (k) { var ch = k.charAt(0); epRank[ch] = Math.max(epRank[ch] || 0, RANK[k.charAt(1)]); });
+  info.cats.forEach(function (c) {
+    var need = { '1': 3, '2': 2, '3': 1, 'M1': 3, 'M2': 2 }[c.k];
+    var ats = c.at === 'GD' || c.at === 'DG' ? ['G', 'D'] : (c.at ? [c.at] : (c.k.charAt(0) === 'M' ? ['M'] : []));
+    ats.forEach(function (a) {
+      if (epRank[a] !== undefined && epRank[a] < need) warnings.push(L('Category ' + c.k + c.at + ' normally needs a higher protection level than the EPL shown. Check the marking against the certificate.', 'الفئة ' + c.k + c.at + ' تتطلب عادة مستوى حماية أعلى من مستوى EPL المذكور. قارن العلامة بالشهادة.'));
+    });
+    if (c.at === 'G' && info.epl.length && !epRank.G) warnings.push(L('The category says gas (G) but the protection level is for dust. Check the marking.', 'الفئة تشير إلى غاز (G) بينما مستوى الحماية خاص بالغبار. راجع العلامة.'));
+    if (c.at === 'D' && info.epl.length && !epRank.D) warnings.push(L('The category says dust (D) but the protection level is for gas. Check the marking.', 'الفئة تشير إلى غبار (D) بينما مستوى الحماية خاص بالغاز. راجع العلامة.'));
+  });
+  if (info.dust.length && info.prot.some(function (p) { return p.base !== 't' && ['d', 'e', 'i', 'm', 'o', 'p', 'q', 'n'].indexOf(p.base) > -1 && !info.gas.length && !info.epl.some(function (k) { return k.charAt(0) === 'D'; }); })) {
+    /* dust group with gas protection types is allowed (for example ia, mb); no warning */
+  }
+  if (info.gas.length && info.prot.some(function (p) { return p.base === 't'; }) && !info.dust.length) {
+    warnings.push(L('Protection type t is for dust, but a gas group was given. Check the marking.', 'نوع الحماية t خاص بالغبار، بينما ذُكرت مجموعة غاز. راجع العلامة.'));
+  }
+  if (exSeen && info.tempC === null && info.gas.filter(function (x) { return x !== 'I'; }).length) {
+    warnings.push(L('No temperature class (T1 to T6) was found in this marking.', 'لم يُعثر على فئة حرارة (T1 إلى T6) في هذه العلامة.'));
+  }
+  if (!exSeen && !parts.length) { /* nothing recognized at all */ }
+
+  return { parts: parts, info: info, warnings: warnings, unknown: unknown, exSeen: exSeen };
+}
+
+/* ------------------------------------------------------------------ */
+/* summary                                                             */
+/* ------------------------------------------------------------------ */
+function summarize(info) {
+  var S = [], at = info.atmos;
+  var g = at.G, d = at.D, mm = at.M;
+  if (g && d) S.push(L('For gas and dust atmospheres.', 'للأجواء الغازية وأجواء الغبار.'));
+  else if (g) S.push(L('For gas and vapor atmospheres.', 'للأجواء الغازية وأبخرة المواد.'));
+  else if (d) S.push(L('For combustible dust atmospheres.', 'لأجواء الغبار القابل للاشتعال.'));
+  else if (mm) S.push(L('For underground mines (firedamp).', 'للمناجم الجوفية (الغاز الحارق).'));
+  if (info.zones.length) {
+    var gz = info.zones.filter(function (z) { return z < 10; }), dz = info.zones.filter(function (z) { return z >= 10; });
+    var en = [], ar = [];
+    if (gz.length) { en.push('Zone ' + joinOr(gz, 'en')); ar.push('المنطقة ' + joinOr(gz, 'ar')); }
+    if (dz.length) { en.push('Zone ' + joinOr(dz, 'en')); ar.push('المنطقة ' + joinOr(dz, 'ar')); }
+    S.push(L('Suitable for ' + en.join(' and for ') + '.', 'مناسبة لـ' + ar.join(' ولـ') + '.'));
+  }
+  if (info.gas.length) {
+    var order = ['IIA', 'IIB', 'IIB+H2', 'IIC'], best = null;
+    info.gas.forEach(function (x) { if (order.indexOf(x) > order.indexOf(best)) best = x; });
+    if (best === 'IIC') S.push(L('Covers gas group IIC, so also IIB and IIA.', 'تشمل مجموعة الغاز IIC، وبالتالي IIB وIIA أيضًا.'));
+    else if (best === 'IIB') S.push(L('Covers gas group IIB, so also IIA.', 'تشمل مجموعة الغاز IIB، وبالتالي IIA أيضًا.'));
+    else if (best === 'IIA') S.push(L('Covers gas group IIA only.', 'تشمل مجموعة الغاز IIA فقط.'));
+    else if (best === 'IIB+H2') S.push(L('Covers gas group IIB and hydrogen.', 'تشمل مجموعة الغاز IIB والهيدروجين.'));
+  }
+  if (info.dust.length) {
+    var o2 = ['IIIA', 'IIIB', 'IIIC'], b2 = null;
+    info.dust.forEach(function (x) { if (o2.indexOf(x) > o2.indexOf(b2)) b2 = x; });
+    if (b2 === 'IIIC') S.push(L('Covers dust group IIIC (conductive), so also IIIB and IIIA.', 'تشمل مجموعة الغبار IIIC (الموصل)، وبالتالي IIIB وIIIA أيضًا.'));
+    else if (b2 === 'IIIB') S.push(L('Covers dust group IIIB, so also IIIA.', 'تشمل مجموعة الغبار IIIB، وبالتالي IIIA أيضًا.'));
+    else S.push(L('Covers dust group IIIA only.', 'تشمل مجموعة الغبار IIIA فقط.'));
+  }
+  if (info.tempC !== null) S.push(L('The surface stays at or below ' + info.tempC + '°C.', 'تبقى حرارة السطح عند ' + info.tempC + '°م أو أقل.'));
+  if (info.prot.length) {
+    var names = [], namesAr = [];
+    info.prot.forEach(function (p) { var b = PROT[p.base]; if (b && names.indexOf(b.n.en) < 0) { names.push(b.n.en); namesAr.push(b.n.ar); } });
+    S.push(L('Protection: ' + names.join(', ') + '.', 'الحماية: ' + namesAr.join('، ') + '.'));
+  }
+  if (info.ambient) {
+    var am = info.ambient;
+    S.push(am.min === null ? L('Ambient up to +' + am.max + '°C.', 'حرارة المحيط حتى +' + am.max + '°م.') : L('Ambient from ' + am.min + '°C to +' + am.max + '°C.', 'حرارة المحيط من ' + am.min + '°م إلى +' + am.max + '°م.'));
+  }
+  return S;
+}
+
+/* ------------------------------------------------------------------ */
+/* IP code                                                             */
+/* ------------------------------------------------------------------ */
+var IP1 = {
+  '0': L('No protection against solid objects.', 'لا توجد حماية من الأجسام الصلبة.'),
+  '1': L('Blocks large objects (50 mm or more), such as the back of a hand.', 'تمنع الأجسام الكبيرة (50 مم أو أكثر)، مثل ظهر اليد.'),
+  '2': L('Blocks fingers and similar objects (12.5 mm or more).', 'تمنع الأصابع والأجسام المشابهة (12.5 مم أو أكثر).'),
+  '3': L('Blocks tools and thick wires (2.5 mm or more).', 'تمنع الأدوات والأسلاك السميكة (2.5 مم أو أكثر).'),
+  '4': L('Blocks wires and small screws (1 mm or more).', 'تمنع الأسلاك والمسامير الصغيرة (1 مم أو أكثر).'),
+  '5': L('Dust-protected. Some dust may get in, but not enough to disturb the equipment.', 'محمية من الغبار. قد يدخل بعض الغبار لكن ليس بما يعطّل المعدة.'),
+  '6': L('Dust-tight. No dust gets in.', 'محكمة ضد الغبار. لا يدخل أي غبار.'),
+  'X': L('Not rated for solid objects and dust.', 'غير مصنّفة للأجسام الصلبة والغبار.')
+};
+var IP2 = {
+  '0': L('No protection against water.', 'لا توجد حماية من الماء.'),
+  '1': L('Protected against water dripping straight down.', 'محمية من تقطير الماء عموديًا.'),
+  '2': L('Protected against dripping water when tilted up to 15°.', 'محمية من تقطير الماء عند الميلان حتى 15°.'),
+  '3': L('Protected against water spray at up to 60° from vertical.', 'محمية من رذاذ الماء بزاوية حتى 60° عن العمودي.'),
+  '4': L('Protected against splashing water from any direction.', 'محمية من تناثر الماء من أي اتجاه.'),
+  '5': L('Protected against water jets from a nozzle.', 'محمية من نفثات الماء من فوهة.'),
+  '6': L('Protected against powerful water jets.', 'محمية من نفثات الماء القوية.'),
+  '7': L('Protected against temporary immersion, up to 1 m for 30 minutes.', 'محمية من الغمر المؤقت، حتى متر واحد لمدة 30 دقيقة.'),
+  '8': L('Protected against continuous immersion. The depth and time are set by the maker.', 'محمية من الغمر المستمر. العمق والمدة يحددهما المصنّع.'),
+  '9': L('Protected against close-range, high-pressure, hot water jets.', 'محمية من نفثات الماء الساخن عالي الضغط من مسافة قريبة.'),
+  'X': L('Not rated for water.', 'غير مصنّفة للماء.')
+};
+var IPL = {
+  A: L('Letter A: the back of a hand cannot reach hazardous parts.', 'الحرف A: لا يمكن لظهر اليد الوصول إلى الأجزاء الخطرة.'),
+  B: L('Letter B: a finger cannot reach hazardous parts.', 'الحرف B: لا يمكن للإصبع الوصول إلى الأجزاء الخطرة.'),
+  C: L('Letter C: a tool cannot reach hazardous parts.', 'الحرف C: لا يمكن لأداة الوصول إلى الأجزاء الخطرة.'),
+  D: L('Letter D: a wire cannot reach hazardous parts.', 'الحرف D: لا يمكن لسلك الوصول إلى الأجزاء الخطرة.'),
+  H: L('Letter H: high-voltage apparatus.', 'الحرف H: جهاز جهد عالٍ.'),
+  M: L('Letter M: water test done with moving parts running.', 'الحرف M: اختبار الماء أُجري والأجزاء المتحركة تعمل.'),
+  S: L('Letter S: water test done with moving parts stopped.', 'الحرف S: اختبار الماء أُجري والأجزاء المتحركة متوقفة.'),
+  W: L('Letter W: suitable for stated weather conditions.', 'الحرف W: مناسبة لظروف جوية محددة.')
+};
+
+function decodeIP(str) {
+  var raw = String(str || '').trim();
+  if (!raw) return null;
+  var items = [], bad = [];
+  raw.split(/[\/,&]|\s+and\s+|\s{2,}/i).forEach(function (seg, idx) {
+    var z = seg.trim(); if (!z) return;
+    if (idx > 0 && /^[0-6X][0-9X]/i.test(z)) z = 'IP' + z;
+    var m = /^IP\s*([0-6Xx])\s*([0-9Xx])(K|k)?\s*([ABCDabcd])?\s*([HMSWhmsw])?$/.exec(z) || /^IP\s*([0-6Xx])\s*([0-9Xx])(K|k)?\s*([ABCDabcd])?\s*([HMSWhmsw])?$/i.exec(z);
+    if (!m) { bad.push(z); return; }
+    var a = m[1].toUpperCase(), b = m[2].toUpperCase();
+    var item = { code: 'IP' + a + b + (m[3] ? 'K' : '') + (m[4] ? m[4].toUpperCase() : '') + (m[5] ? m[5].toUpperCase() : ''), d1: a, d2: b, solid: IP1[a], water: IP2[b], extra: [] };
+    if (m[3]) item.extra.push(L('K: high-pressure, high-temperature wash-down test for road vehicles (as in IP69K).', 'K: اختبار غسل بضغط وحرارة عاليين للمركبات على الطرق (كما في IP69K).'));
+    if (m[4]) item.extra.push(IPL[m[4].toUpperCase()]);
+    if (m[5]) item.extra.push(IPL[m[5].toUpperCase()]);
+    items.push(item);
+  });
+  return { items: items, bad: bad };
+}
+
+/* ------------------------------------------------------------------ */
+/* certificates                                                        */
+/* ------------------------------------------------------------------ */
+function decodeCert(str) {
+  var raw = String(str || '').trim();
+  if (!raw) return null;
+  var m, flags = function (f) {
+    var o = [];
+    if (/X/i.test(f)) o.push({ code: 'X', title: L('Special conditions of use', 'شروط خاصة للاستخدام'), text: L('The certificate lists special conditions for safe use. Read them before installing.', 'تذكر الشهادة شروطًا خاصة للاستخدام الآمن. اقرأها قبل التركيب.') });
+    if (/U/i.test(f)) o.push({ code: 'U', title: L('Component certificate', 'شهادة مكوّن'), text: L('It covers a component, not a complete piece of equipment.', 'تغطي مكوّنًا وليس معدة كاملة.') });
+    return o;
+  };
+  var yr = function (y) { var n = parseInt(y, 10); return n >= 90 ? 1900 + n : 2000 + n; };
+  m = /^IECEx\s*([A-Za-z]{2,6})\s*(\d{2})\.(\d{3,5})\s*([XUxu]{0,2})$/i.exec(raw);
+  if (m) {
+    return { kind: 'IECEx', parts: [
+      { code: 'IECEx', title: L('IECEx certificate', 'شهادة IECEx'), text: L('An international certificate of conformity from the IECEx scheme.', 'شهادة مطابقة دولية من نظام IECEx.') },
+      { code: m[1].toUpperCase(), title: L('Certification body code', 'رمز جهة الاعتماد'), text: L('A short code for the certification body that issued the certificate.', 'رمز مختصر لجهة الاعتماد التي أصدرت الشهادة.') },
+      { code: m[2], title: L('Year of issue: ' + yr(m[2]), 'سنة الإصدار: ' + yr(m[2])), text: L('The two digits are the year the certificate was first issued.', 'الرقمان يدلان على سنة الإصدار الأولى للشهادة.') },
+      { code: m[3], title: L('Serial number', 'الرقم التسلسلي'), text: L('The number the body gave this certificate in that year.', 'الرقم الذي منحته الجهة لهذه الشهادة في تلك السنة.') }
+    ].concat(flags(m[4])) };
+  }
+  m = /^([A-Za-zÄÖÜäöüß&.\- ]{2,30}?)\s*(\d{2})\s*ATEX\s*([A-Za-z]?)\s*(\d{3,5})\s*([XUxu]{0,2})$/i.exec(raw);
+  if (m) {
+    var ps = [
+      { code: m[1].trim(), title: L('Certification body', 'جهة الاعتماد'), text: L('The name or short name of the body that issued the EU-type examination certificate, exactly as written.', 'اسم الجهة التي أصدرت شهادة فحص النوع الأوروبية أو اسمها المختصر، كما هو مكتوب.') },
+      { code: m[2], title: L('Year of issue: ' + yr(m[2]), 'سنة الإصدار: ' + yr(m[2])), text: L('The two digits are the year the certificate was issued.', 'الرقمان يدلان على سنة إصدار الشهادة.') },
+      { code: 'ATEX', title: L('ATEX certificate', 'شهادة ATEX'), text: L('Shows it is a certificate under the European ATEX rules.', 'تدل على أنها شهادة وفق قواعد ATEX الأوروبية.') }
+    ];
+    if (m[3]) ps.push({ code: m[3].toUpperCase(), title: L('Extra letter', 'حرف إضافي'), text: L('Some bodies add a letter to their numbering scheme.', 'بعض الجهات تضيف حرفًا إلى نظام الترقيم لديها.') });
+    ps.push({ code: m[4], title: L('Serial number', 'الرقم التسلسلي'), text: L('The number the body gave this certificate.', 'الرقم الذي منحته الجهة لهذه الشهادة.') });
+    return { kind: 'ATEX', parts: ps.concat(flags(m[5])) };
+  }
+  m = /^E\s?(\d{4,7})$/i.exec(raw);
+  if (m) return { kind: 'NA', parts: [{ code: 'E' + m[1], title: L('Looks like a UL file number', 'تبدو كرقم ملف UL'), text: L('Numbers that start with E followed by digits are normally UL file numbers.', 'الأرقام التي تبدأ بالحرف E ثم أرقام هي عادة أرقام ملفات UL.') }] };
+  m = /^(?:LR|C?LR)\s?-?(\d{3,7})$/i.exec(raw);
+  if (m) return { kind: 'NA', parts: [{ code: 'LR ' + m[1], title: L('Looks like a CSA file number', 'تبدو كرقم ملف CSA'), text: L('Numbers that start with LR are normally CSA file numbers.', 'الأرقام التي تبدأ بالرمز LR هي عادة أرقام ملفات CSA.') }] };
+  if (/^\d{5,9}$/.test(raw)) return { kind: 'NA', parts: [{ code: raw, title: L('A certificate or file number', 'رقم شهادة أو ملف'), text: L('It is probably a number from a testing laboratory. The digits alone do not say which one.', 'غالبًا هو رقم من مختبر اختبار. الأرقام وحدها لا تحدد أي مختبر.') }] };
+  return { kind: 'unknown', parts: [] };
+}
+
+/* ------------------------------------------------------------------ */
+/* NEC / CEC                                                           */
+/* ------------------------------------------------------------------ */
+var NCLASS = {
+  I: { t: L('Class I', 'الصنف I'), x: L('Flammable gases or vapors.', 'غازات أو أبخرة قابلة للاشتعال.'), icon: 'gas' },
+  II: { t: L('Class II', 'الصنف II'), x: L('Combustible dust.', 'غبار قابل للاشتعال.'), icon: 'dust' },
+  III: { t: L('Class III', 'الصنف III'), x: L('Easily ignitable fibers and flyings, such as textile fibers and wood chips.', 'ألياف ومواد متطايرة سهلة الاشتعال، مثل ألياف النسيج ونشارة الخشب.'), icon: 'fiber' }
+};
+var NDIV = {
+  1: { t: L('Division 1', 'القسم 1'), x: L('The hazard can be present in normal operation, or often because of repairs, maintenance or leaks. This is the stricter division.', 'قد يوجد الخطر في التشغيل العادي، أو كثيرًا بسبب الإصلاح أو الصيانة أو التسريب. وهو القسم الأشد صرامة.') },
+  2: { t: L('Division 2', 'القسم 2'), x: L('The hazard is normally contained and only appears if something fails or leaks.', 'يكون الخطر محصورًا عادة ولا يظهر إلا إذا حدث عطل أو تسريب.') }
+};
+var NGRP = {
+  A: { x: L('Acetylene.', 'الأسيتيلين.'), e: L('Roughly gas group IIC.', 'تقابل تقريبًا مجموعة الغاز IIC.') },
+  B: { x: L('Hydrogen and similar gases.', 'الهيدروجين وغازات مشابهة.'), e: L('Roughly gas group IIC.', 'تقابل تقريبًا مجموعة الغاز IIC.') },
+  C: { x: L('Ethylene and similar gases.', 'الإيثيلين وغازات مشابهة.'), e: L('Roughly gas group IIB.', 'تقابل تقريبًا مجموعة الغاز IIB.') },
+  D: { x: L('Propane, gasoline and many solvents.', 'البروبان والبنزين وكثير من المذيبات.'), e: L('Roughly gas group IIA.', 'تقابل تقريبًا مجموعة الغاز IIA.') },
+  E: { x: L('Metal dusts, which conduct electricity.', 'غبار المعادن الموصل للكهرباء.'), e: L('', '') },
+  F: { x: L('Carbon-based dusts such as coal and coke.', 'غبار قائم على الكربون مثل الفحم والكوك.'), e: L('', '') },
+  G: { x: L('Grain, flour, plastic and wood dusts, which do not conduct electricity.', 'غبار الحبوب والدقيق والبلاستيك والخشب غير الموصل للكهرباء.'), e: L('', '') }
+};
+var NEMA = {
+  '1': 'Indoor use. Protects against contact with the enclosure and falling dirt.|للاستخدام الداخلي. تحمي من ملامسة الغلاف ومن سقوط الأتربة.',
+  '2': 'Indoor use. Adds protection against dripping water.|للاستخدام الداخلي. تضيف حماية من تقطير الماء.',
+  '3': 'Outdoor use. Protects against rain, sleet, snow and windblown dust.|للاستخدام الخارجي. تحمي من المطر والصقيع والثلج والغبار المحمول بالرياح.',
+  '3R': 'Outdoor use. Protects against rain, sleet and snow.|للاستخدام الخارجي. تحمي من المطر والصقيع والثلج.',
+  '3S': 'Outdoor use. Like type 3, and it still works when covered in ice.|للاستخدام الخارجي. مثل النوع 3، وتبقى تعمل عند تغطيتها بالجليد.',
+  '4': 'Indoor or outdoor. Protects against windblown dust, rain, splashing and hose-directed water.|للاستخدام الداخلي والخارجي. تحمي من الغبار المحمول بالرياح والمطر والتناثر والماء الموجّه بخرطوم.',
+  '4X': 'Like type 4, plus resistance to corrosion.|مثل النوع 4، مع مقاومة للتآكل.',
+  '5': 'Indoor use. Protects against settling dust and dripping non-corrosive liquids.|للاستخدام الداخلي. تحمي من الغبار المترسب وتقطير السوائل غير المسببة للتآكل.',
+  '6': 'Protects against temporary submersion.|تحمي من الغمر المؤقت.',
+  '6P': 'Protects against long submersion.|تحمي من الغمر الطويل.',
+  '7': 'For Class I hazardous locations, Groups A to D. This is the explosion-proof type.|للمواقع الخطرة من الصنف I، المجموعات A إلى D. وهو نوع مقاوم للانفجار.',
+  '8': 'For Class I hazardous locations, with the equipment immersed in oil.|للمواقع الخطرة من الصنف I، مع غمر المعدات بالزيت.',
+  '9': 'For Class II hazardous locations, Groups E to G (dust).|للمواقع الخطرة من الصنف II، المجموعات E إلى G (غبار).',
+  '10': 'For mines, as tested by the US mine safety agency.|للمناجم، وفق اختبار وكالة سلامة المناجم الأمريكية.',
+  '12': 'Industrial indoor use. Protects against dust, falling dirt and dripping liquids.|للاستخدام الصناعي الداخلي. تحمي من الغبار والأتربة المتساقطة والسوائل المتقطرة.',
+  '13': 'Like type 12, plus protection against oil and coolant seepage.|مثل النوع 12، مع حماية من تسرّب الزيت وسوائل التبريد.'
+};
+
+function parseNEC(raw) {
+  var s = String(raw || '').replace(/[;()]/g, ' ');
+  var tk = s.split(/[\s,&\/+]+/).filter(Boolean);
+  var info = { classes: [], divs: [], groups: [], zones: [], temps: [], encl: [], ex: null };
+  var parts = [], warnings = [], unknown = [], mode = '', rangeFrom = null;
+  var roman = function (r) { r = r.toUpperCase(); return { '1': 'I', '2': 'II', '3': 'III' }[r] || r; };
+  for (var i = 0; i < tk.length; i++) {
+    var t = tk[i], up = t.toUpperCase(), n;
+    if (/^(AEX|EX|EEX)$/.test(up)) { info.ex = tk.slice(i).join(' '); break; }
+    if (/^(CLASS|CLASSES|CL|CL\.)$/.test(up)) { mode = 'class'; continue; }
+    if (/^(DIV|DIV\.|DIVISION|DIVISIONS)$/.test(up)) { mode = 'div'; continue; }
+    if (/^(GROUP|GROUPS|GRP|GRP\.)$/.test(up)) { mode = 'group'; continue; }
+    if (/^(ZONE|ZONES)$/.test(up)) { mode = 'zone'; continue; }
+    if ((n = /^(?:NEMA|TYPE)(\d{1,2}[A-Z]{0,2})$/.exec(up))) { info.encl.push(n[1]); mode = ''; continue; }
+    if (/^(NEMA|TYPE)$/.test(up)) { mode = 'encl'; continue; }
+    if ((n = /^T(1|2[A-D]?|3[A-C]?|4A?|5|6)$/.exec(up))) { info.temps.push('T' + n[1]); mode = ''; continue; }
+    if (up === 'AND') continue;
+    if (up === 'TO') { rangeFrom = info.groups.length ? info.groups[info.groups.length - 1] : null; continue; }
+    if (mode === 'class' && (n = /^(III|II|I|1|2|3)$/.exec(up))) { info.classes.push(roman(n[1])); continue; }
+    if (mode === 'div' && (n = /^([12])$/.exec(up))) { info.divs.push(parseInt(n[1], 10)); continue; }
+    if (mode === 'zone' && /^(0|1|2|20|21|22)$/.test(up)) { info.zones.push(parseInt(up, 10)); continue; }
+    if (mode === 'encl' && /^\d{1,2}[A-Z]{0,2}$/.test(up)) { info.encl.push(up); mode = ''; continue; }
+    if (mode === 'group') {
+      if ((n = /^([A-G])-([A-G])$/.exec(up))) { for (var c = n[1].charCodeAt(0); c <= n[2].charCodeAt(0); c++) info.groups.push(String.fromCharCode(c)); continue; }
+      if (/^[A-G]+$/.test(up)) {
+        if (rangeFrom && up.length === 1) { for (var c2 = rangeFrom.charCodeAt(0) + 1; c2 <= up.charCodeAt(0); c2++) info.groups.push(String.fromCharCode(c2)); rangeFrom = null; continue; }
+        up.split('').forEach(function (ch) { info.groups.push(ch); }); continue;
+      }
+    }
+    if (/^IP\s?[0-6X][0-9X]/i.test(t)) { continue; }
+    unknown.push(t); mode = '';
+  }
+  info.classes = uniq(info.classes); info.divs = uniq(info.divs); info.groups = uniq(info.groups).sort(); info.zones = uniq(info.zones); info.temps = uniq(info.temps); info.encl = uniq(info.encl);
+
+  info.classes.forEach(function (c) { var d = NCLASS[c]; parts.push({ kind: 'class', code: 'Class ' + c, title: d.t, text: d.x, more: L('', ''), icon: d.icon }); });
+  info.divs.forEach(function (d) { var x = NDIV[d]; parts.push({ kind: 'div', code: 'Div ' + d, title: x.t, text: x.x, more: d === 1 ? L('In the zone system this is roughly Zone 0 and Zone 1.', 'في نظام المناطق يقابل هذا تقريبًا المنطقة 0 والمنطقة 1.') : L('In the zone system this is roughly Zone 2.', 'في نظام المناطق يقابل هذا تقريبًا المنطقة 2.'), icon: 'zone', arg: String(d) }); });
+  info.zones.forEach(function (z) { parts.push({ kind: 'zone', code: 'Zone ' + z, title: L('Zone ' + z, 'المنطقة ' + z), text: ZONE[z], more: L('', ''), icon: 'zone', arg: String(z) }); });
+  info.groups.forEach(function (g) { var d = NGRP[g]; parts.push({ kind: 'group', code: 'Group ' + g, title: L('Group ' + g, 'المجموعة ' + g), text: d.x, more: d.e, icon: 'ABCD'.indexOf(g) > -1 ? 'gas' : 'dust' }); });
+  info.temps.forEach(function (tc) {
+    var v = TEMP_NA[tc];
+    parts.push({ kind: 'temp', code: tc, title: L('Temperature code ' + tc, 'رمز الحرارة ' + tc), text: L('The surface of the equipment never gets hotter than ' + v + '°C.', 'لا تتجاوز حرارة سطح المعدة ' + v + '°م أبدًا.'), more: L('The gas or dust in your area must ignite at a higher temperature than this. The letters A to D split a class into finer steps.', 'يجب أن يشتعل الغاز أو الغبار في منطقتك عند حرارة أعلى من هذه. الحروف A إلى D تقسّم الفئة إلى درجات أدق.'), icon: 'temp', arg: String(v) });
+  });
+  info.encl.forEach(function (e) {
+    var v = NEMA[e];
+    parts.push({ kind: 'nema', code: 'Type ' + e, title: L('Enclosure type ' + e, 'نوع الغلاف ' + e), text: v ? L(v.split('|')[0], v.split('|')[1]) : L('An enclosure type from the NEMA 250 list.', 'نوع غلاف من قائمة NEMA 250.'), more: L('Enclosure types are not the same thing as IP ratings, and they do not convert one to one.', 'أنواع الأغلفة ليست مثل درجات IP، ولا تتحوّل بينها بشكل مباشر.'), icon: 'nema' });
+  });
+
+  var sub = null;
+  if (info.ex) {
+    sub = parseMarking(info.ex);
+    sub.parts.forEach(function (p) { parts.push(p); });
+    sub.warnings.forEach(function (w) { warnings.push(w); });
+    sub.unknown.forEach(function (u) { unknown.push(u); });
+  }
+
+  /* checks */
+  var hasI = info.classes.indexOf('I') > -1, hasII = info.classes.indexOf('II') > -1, hasIII = info.classes.indexOf('III') > -1;
+  var gasG = info.groups.filter(function (g) { return 'ABCD'.indexOf(g) > -1; }), dustG = info.groups.filter(function (g) { return 'EFG'.indexOf(g) > -1; });
+  if (gasG.length && info.classes.length && !hasI) warnings.push(L('Groups A to D belong to Class I (gas), but Class I was not given.', 'المجموعات A إلى D تتبع الصنف I (غاز)، لكن الصنف I لم يُذكر.'));
+  if (dustG.length && info.classes.length && !hasII) warnings.push(L('Groups E to G belong to Class II (dust), but Class II was not given.', 'المجموعات E إلى G تتبع الصنف II (غبار)، لكن الصنف II لم يُذكر.'));
+  if (hasIII && info.groups.length && !hasI && !hasII) warnings.push(L('Class III has no groups. Check the marking.', 'الصنف III ليس له مجموعات. راجع العلامة.'));
+  if ((hasI || hasII) && !info.groups.length && !(sub && (sub.info.gas.length || sub.info.dust.length))) warnings.push(L('No group (A to G) was found. The group says which gases or dusts the equipment is approved for.', 'لم يُعثر على مجموعة (A إلى G). المجموعة تحدد الغازات أو الأغبرة المعتمدة للمعدة.'));
+  if (info.classes.length && !info.divs.length && !info.zones.length) warnings.push(L('No division or zone was found.', 'لم يُعثر على قسم أو منطقة.'));
+  if (info.temps.length === 0 && (hasI || hasII) && !(sub && sub.info.tempC !== null)) warnings.push(L('No temperature code (T1 to T6) was found.', 'لم يُعثر على رمز حرارة (T1 إلى T6).'));
+
+  var S = [];
+  if (info.classes.length) {
+    var cn = info.classes.map(function (c) { return NCLASS[c].x; });
+    S.push(L('Class ' + info.classes.join(', ') + ': ' + cn.map(function (x) { return x.en.replace(/\.$/, '').toLowerCase(); }).join('; ') + '.', 'الصنف ' + info.classes.join('، ') + ': ' + cn.map(function (x) { return x.ar.replace(/\.$/, ''); }).join('؛ ') + '.'));
+  }
+  if (info.divs.length) {
+    S.push(info.divs.indexOf(1) > -1 ? L('Division 1: the hazard can be present in normal operation. The strictest case.', 'القسم 1: قد يوجد الخطر في التشغيل العادي. وهي الحالة الأشد صرامة.') : L('Division 2: the hazard appears only if something fails or leaks.', 'القسم 2: يظهر الخطر فقط عند حدوث عطل أو تسريب.'));
+  }
+  if (info.groups.length) {
+    S.push(L('Group' + (info.groups.length > 1 ? 's ' : ' ') + info.groups.join(', ') + ': ' + info.groups.map(function (g) { return NGRP[g].x.en.replace(/\.$/, '').toLowerCase(); }).join('; ') + '.', (info.groups.length > 1 ? 'المجموعات ' : 'المجموعة ') + info.groups.join('، ') + ': ' + info.groups.map(function (g) { return NGRP[g].x.ar.replace(/\.$/, ''); }).join('؛ ') + '.'));
+  }
+  if (info.zones.length) S.push(L('Zone ' + joinOr(info.zones.map(String), 'en') + ' (zone system).', 'المنطقة ' + joinOr(info.zones.map(String), 'ar') + ' (نظام المناطق).'));
+  if (info.temps.length) { var hot = info.temps.map(function (x) { return TEMP_NA[x]; }).sort(function (a, b) { return b - a; })[0]; S.push(L('The surface stays at or below ' + hot + '°C.', 'تبقى حرارة السطح عند ' + hot + '°م أو أقل.')); }
+  if (sub) summarize(sub.info).forEach(function (x) { S.push(x); });
+
+  var zs = info.zones.slice();
+  if (sub) zs = zs.concat(sub.info.zones);
+  zs = uniq(zs).sort(function (a, b) { return a - b; });
+
+  return { parts: parts, summary: S, warnings: warnings, unknown: unknown, zones: zs, info: info, sub: sub };
+}
+
+/* ------------------------------------------------------------------ */
+/* public API                                                          */
+/* ------------------------------------------------------------------ */
+function analyze(system, marking, ip, cert) {
+  var out = { system: system, parts: [], summary: [], warnings: [], unknown: [], zones: [], ip: null, cert: null, recognized: false };
+  if (system === 'NEC') {
+    var r = parseNEC(marking);
+    out.parts = r.parts; out.summary = r.summary; out.warnings = r.warnings; out.unknown = r.unknown; out.zones = r.zones;
+  } else {
+    var p = parseMarking(marking);
+    out.parts = p.parts; out.summary = summarize(p.info); out.warnings = p.warnings; out.unknown = p.unknown; out.zones = p.info.zones;
+    if (system === 'ATEX' && p.exSeen && !p.info.cats.length) out.warnings.push(L('No ATEX group and category (for example II 2G) were found. This looks like an IECEx-style marking.', 'لم يُعثر على مجموعة وفئة ATEX (مثل II 2G). تبدو هذه علامة بنمط IECEx.'));
+    if (p.info.ip.length && !ip) ip = p.info.ip.join('/');
+  }
+  out.recognized = out.parts.length > 0;
+  if (ip && String(ip).trim()) out.ip = decodeIP(ip);
+  if (cert && String(cert).trim()) out.cert = decodeCert(cert);
+  return out;
+}
+
+var api = { analyze: analyze, decodeIP: decodeIP, decodeCert: decodeCert, parseMarking: parseMarking, parseNEC: parseNEC, PROT: PROT, ZONE: ZONE, IP1: IP1, IP2: IP2, NEMA: NEMA, TEMP: TEMP };
+if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ExEngine = api;
+})(typeof window !== 'undefined' ? window : this);
+
+/* Cartoon illustrations (original drawings) and UI glyphs */
+var IC = (function () {
+  var N = '#0B1B3F', Y = '#F5C518', O = '#FF8A3D', R = '#E5484D', B = '#4DA3FF', S = '#B7C1CE', S2 = '#8793A5', W = '#FFFFFF', G = '#3FBF8A', SAND = '#C9A66B';
+  var st = ' stroke="' + N + '" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"';
+  function svg(inner) { return '<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">' + inner + '</svg>'; }
+  function flame(x, y, s) {
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><path d="M0 -15c2 6 9 9 9 17a9 9 0 0 1-18 0c0-5 3-8 4-12 2 2 3 3 3 6 2-3 2-7 2-11z" fill="' + O + '"' + st + '/><path d="M0 -3c1 3 4 4 4 8a4 4 0 0 1-8 0c0-3 2-4 4-8z" fill="' + Y + '"/></g>';
+  }
+  function bolt(x, y, s, fill) {
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><polygon points="4,-14 -8,2 -1,2 -4,14 8,-2 1,-2" fill="' + (fill || Y) + '"' + st + '/></g>';
+  }
+  function dots(list, fill) {
+    return list.map(function (d) { return '<circle cx="' + d[0] + '" cy="' + d[1] + '" r="' + d[2] + '" fill="' + fill + '"/>'; }).join('');
+  }
+  var lib = {
+    group2: function () { return svg('<rect x="8" y="30" width="48" height="24" rx="2" fill="' + S + '"' + st + '/><rect x="13" y="14" width="9" height="16" fill="' + S2 + '"' + st + '/><rect x="28" y="20" width="9" height="10" fill="' + S2 + '"' + st + '/><circle cx="18" cy="9" r="4" fill="' + W + '"' + st + '/><circle cx="25" cy="5" r="3" fill="' + W + '"' + st + '/><rect x="14" y="36" width="8" height="6" fill="' + Y + '"/><rect x="28" y="36" width="8" height="6" fill="' + Y + '"/><rect x="42" y="36" width="8" height="6" fill="' + Y + '"/><rect x="26" y="45" width="12" height="9" fill="' + N + '"/>'); },
+    group1: function () { return svg('<path d="M12 40a20 20 0 0 1 40 0z" fill="' + Y + '"' + st + '/><rect x="7" y="40" width="50" height="8" rx="4" fill="' + Y + '"' + st + '/><rect x="28" y="12" width="8" height="28" fill="#E0A800"' + st + '/><circle cx="32" cy="27" r="6" fill="' + W + '"' + st + '/><path d="M32 8v-4M20 14l-3-3M44 14l3-3" stroke="' + N + '" stroke-width="2.4" stroke-linecap="round"/>'); },
+    cat: function (a) { var n = String(a || '2').replace('M', 'M'); return svg('<path d="M32 6l20 7v16c0 14-9 24-20 29C21 53 12 43 12 29V13z" fill="' + Y + '"' + st + '/><text x="32" y="41" text-anchor="middle" font-family="Arial, sans-serif" font-size="' + (n.length > 1 ? 22 : 28) + '" font-weight="700" fill="' + N + '">' + n + '</text>'); },
+    ex: function () { return svg('<path d="M10 44a22 22 0 0 1 44 0z" fill="#EAF3FF"' + st + '/><rect x="8" y="44" width="48" height="9" rx="2" fill="' + S + '"' + st + '/>' + bolt(32, 32, 1.05)); },
+    gas: function () { return svg('<path d="M17 48a10 10 0 0 1 0-20 12 12 0 0 1 23-3 10 10 0 0 1 6 23z" fill="#EAF3FF"' + st + '/><path d="M20 54c4-3 8 3 12 0s8 3 12 0" fill="none" stroke="' + B + '" stroke-width="3" stroke-linecap="round"/>' + flame(46, 22, .55)); },
+    dust: function () { return svg('<path d="M6 54q26-28 52 0z" fill="' + SAND + '"' + st + '/>' + dots([[16, 22, 3], [28, 12, 2.5], [40, 24, 3.5], [50, 13, 2], [34, 33, 2.2], [20, 36, 2]], SAND) + '<g stroke="' + N + '" stroke-width="1.2" fill="none"><circle cx="16" cy="22" r="3"/><circle cx="40" cy="24" r="3.5"/><circle cx="28" cy="12" r="2.5"/></g>'); },
+    fiber: function () { return svg('<path d="M8 20c8-8 12 8 24 0s16 8 24 0M8 34c8-8 12 8 24 0s16 8 24 0M8 48c8-8 12 8 24 0s16 8 24 0" fill="none" stroke="' + SAND + '" stroke-width="4" stroke-linecap="round"/>'); },
+    temp: function () { return svg('<rect x="25" y="8" width="14" height="36" rx="7" fill="' + W + '"' + st + '/><circle cx="32" cy="48" r="9" fill="' + R + '"' + st + '/><rect x="29.5" y="22" width="5" height="26" fill="' + R + '"/><path d="M44 14h6M44 22h6M44 30h6" stroke="' + N + '" stroke-width="2.4" stroke-linecap="round"/>'); },
+    epl: function () { return svg('<rect x="9" y="38" width="13" height="16" fill="' + G + '"' + st + '/><rect x="25" y="26" width="13" height="28" fill="' + Y + '"' + st + '/><rect x="41" y="12" width="13" height="42" fill="' + R + '"' + st + '/>'); },
+    zone: function () { return svg('<circle cx="32" cy="32" r="26" fill="#FFE9A8"' + st + '/><circle cx="32" cy="32" r="18" fill="#FFB066"' + st + '/><circle cx="32" cy="32" r="9" fill="#FF6B5E"' + st + '/>'); },
+    nema: function () { return svg('<rect x="10" y="30" width="44" height="24" rx="4" fill="' + S + '"' + st + '/><circle cx="32" cy="42" r="4" fill="' + S2 + '"' + st + '/><path d="M32 4c6 8 9 12 9 17a9 9 0 0 1-18 0c0-5 3-9 9-17z" fill="' + B + '"' + st + '/>'); },
+    ce: function () { return svg('<rect x="25" y="6" width="14" height="22" rx="7" fill="' + R + '"' + st + '/><rect x="13" y="28" width="38" height="11" rx="3" fill="' + S + '"' + st + '/><rect x="9" y="43" width="46" height="9" rx="2" fill="' + Y + '"' + st + '/>'); },
+    cert: function () { return svg('<rect x="10" y="7" width="38" height="46" rx="4" fill="' + W + '"' + st + '/><path d="M17 19h24M17 27h24M17 35h14" stroke="' + S2 + '" stroke-width="3" stroke-linecap="round"/><path d="M40 52l-4 8 8-3 8 3-4-8z" fill="' + R + '"' + st + '/><circle cx="44" cy="46" r="9" fill="' + Y + '"' + st + '/>'); },
+    x: function () { return svg('<path d="M32 7L58 54H6z" fill="' + Y + '"' + st + '/><path d="M25 31l14 14M39 31L25 45" stroke="' + N + '" stroke-width="4.5" stroke-linecap="round"/>'); },
+    u: function () { return svg('<rect x="17" y="17" width="30" height="30" rx="4" fill="' + B + '"' + st + '/><path d="M24 17V9M32 17V9M40 17V9M24 47v8M32 47v8M40 47v8M17 24H9M17 32H9M17 40H9M47 24h8M47 32h8M47 40h8" stroke="' + N + '" stroke-width="2.4" stroke-linecap="round"/><rect x="25" y="25" width="14" height="14" rx="2" fill="' + N + '"/>'); },
+    assoc: function () { return svg('<rect x="5" y="18" width="21" height="28" rx="3" fill="#FFB066"' + st + '/><rect x="38" y="18" width="21" height="28" rx="3" fill="#EAF3FF"' + st + '/><path d="M32 8v48" stroke="' + N + '" stroke-width="2.4" stroke-dasharray="4 4"/><path d="M26 32h12" stroke="' + N + '" stroke-width="3" stroke-linecap="round"/>' + flame(15.5, 36, .5)); },
+    d: function () { return svg('<rect x="7" y="14" width="50" height="40" rx="6" fill="' + S2 + '"' + st + '/><rect x="17" y="23" width="30" height="23" rx="3" fill="#3A2A1A"/>' + flame(32, 40, .9) + '<circle cx="14" cy="20" r="1.6" fill="' + W + '"/><circle cx="50" cy="20" r="1.6" fill="' + W + '"/><circle cx="14" cy="48" r="1.6" fill="' + W + '"/><circle cx="50" cy="48" r="1.6" fill="' + W + '"/>'); },
+    e: function () { return svg('<rect x="7" y="22" width="50" height="26" rx="4" fill="#2E8B64"' + st + '/><circle cx="19" cy="35" r="6" fill="' + S + '"' + st + '/><circle cx="32" cy="35" r="6" fill="' + S + '"' + st + '/><circle cx="45" cy="35" r="6" fill="' + S + '"' + st + '/><path d="M16 35h6M29 35h6M42 35h6" stroke="' + N + '" stroke-width="2" stroke-linecap="round"/><path d="M19 22V10M32 22V10M45 22V10M19 48v8M32 48v8M45 48v8" stroke="' + N + '" stroke-width="3" stroke-linecap="round"/>'); },
+    i: function () { return svg('<rect x="7" y="22" width="34" height="22" rx="3" fill="' + W + '"' + st + '/><rect x="41" y="29" width="5" height="8" fill="' + S2 + '"' + st + '/><rect x="12" y="27" width="7" height="12" fill="' + G + '"/><circle cx="47" cy="46" r="11" fill="#FFF"' + st + '/><path d="M40 53l14-14" stroke="' + R + '" stroke-width="3.2" stroke-linecap="round"/>' + bolt(47, 46, .5)); },
+    m: function () { return svg('<path d="M8 34c0-14 10-23 24-23s24 9 24 23-9 20-24 20S8 48 8 34z" fill="#7FC8FF"' + st + '/><rect x="21" y="25" width="22" height="18" rx="2" fill="' + N + '"/><path d="M26 25v-4M32 25v-4M38 25v-4M26 43v4M32 43v4M38 43v4" stroke="' + N + '" stroke-width="2" stroke-linecap="round"/><circle cx="48" cy="22" r="2" fill="' + W + '"/>'); },
+    o: function () { return svg('<path d="M10 28h44v24a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4z" fill="#E8B923"' + st + '/><path d="M10 36q7-5 11 0t11 0 11 0 11 0" fill="none" stroke="#B88A00" stroke-width="2.4"/><path d="M32 4c5 6 8 9 8 14a8 8 0 0 1-16 0c0-5 3-8 8-14z" fill="#E8B923"' + st + '/><rect x="26" y="44" width="12" height="8" rx="1" fill="' + N + '"/>'); },
+    p: function () { return svg('<rect x="15" y="19" width="34" height="28" rx="4" fill="' + S + '"' + st + '/><path d="M32 4v10m-5-5 5 5 5-5M32 60V50m-5 5 5-5 5 5M4 33h10m-5-5 5 5-5 5M60 33H50m5-5-5 5 5 5" fill="none" stroke="' + B + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="33" r="5" fill="' + W + '"' + st + '/>'); },
+    q: function () { return svg('<rect x="9" y="14" width="46" height="40" rx="5" fill="#EBD9A6"' + st + '/>' + dots([[16, 22, 1.8], [26, 20, 1.8], [38, 23, 1.8], [48, 20, 1.8], [18, 32, 1.8], [46, 32, 1.8], [16, 44, 1.8], [28, 47, 1.8], [40, 45, 1.8], [49, 46, 1.8], [22, 26, 1.8], [42, 28, 1.8]], '#B8935A') + '<rect x="25" y="28" width="14" height="14" rx="2" fill="' + N + '"/>'); },
+    n: function () { return svg('<circle cx="32" cy="32" r="22" fill="#fff"' + st + '/>' + bolt(32, 32, 1.1) + '<path d="M17 47L47 17" stroke="' + R + '" stroke-width="5" stroke-linecap="round"/>'); },
+    t: function () { return svg('<rect x="14" y="28" width="36" height="26" rx="4" fill="' + S + '"' + st + '/><path d="M20 28v-4a12 12 0 0 1 24 0v4" fill="none" stroke="' + N + '" stroke-width="2.4"/>' + dots([[8, 14, 2.5], [18, 8, 2], [48, 10, 2.5], [57, 20, 2], [6, 30, 2], [58, 36, 2.4], [32, 6, 2]], SAND) + '<rect x="27" y="36" width="10" height="10" rx="2" fill="' + N + '"/>'); },
+    op: function () { return svg('<circle cx="19" cy="32" r="11" fill="' + Y + '"' + st + '/><rect x="27" y="26" width="9" height="12" rx="2" fill="' + S2 + '"' + st + '/><path d="M40 32h20M40 24l16-8M40 40l16 8" stroke="' + Y + '" stroke-width="3.5" stroke-linecap="round"/><path d="M40 32h20M40 24l16-8M40 40l16 8" stroke="' + N + '" stroke-width="1" stroke-linecap="round" opacity=".5"/>'); },
+    s: function () { return svg('<polygon points="32,6 39,24 58,24 43,36 49,56 32,44 15,56 21,36 6,24 25,24" fill="' + Y + '"' + st + '/>'); },
+    h: function () {
+      var teeth = ''; for (var k = 0; k < 8; k++) teeth += '<rect x="-4.5" y="-24" width="9" height="10" rx="1.5" fill="' + S + '"' + st + ' transform="rotate(' + (k * 45) + ')"/>';
+      return svg('<g transform="translate(32 32)">' + teeth + '<circle r="16" fill="' + S + '"' + st + '/><circle r="6" fill="' + W + '"' + st + '/></g>');
+    }
+  };
+  function icon(name, arg) { var f = lib[name] || lib.ex; return f(arg); }
+
+  /* small UI glyphs (single colour, currentColor) */
+  function g(path, extra) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"' + (extra || '') + '>' + path + '</svg>'; }
+  var ui = {
+    back: g('<path d="M15 5l-7 7 7 7"/>'),
+    search: g('<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/>'),
+    chev: g('<path d="M9 5l7 7-7 7"/>'),
+    warn: g('<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.01"/>'),
+    info: g('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>'),
+    check: g('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    book: g('<path d="M3 5.5C5.5 4 9 4 12 6c3-2 6.5-2 9-.5V19c-2.500-1.500-6-1.500-9 .5-3-2-6.500-2-9-.5z"/><path d="M12 6v13.500"/>'),
+    hazard: g('<path d="M12 3l10 18H2z"/><path d="M12 9v5"/><path d="M12 17.500v.01"/>'),
+    shield: g('<path d="M12 3l8 3v6c0 5-3.500 8-8 9-4.500-1-8-4-8-9V6z"/><path d="M8.500 12l2.500 2.500L16 9.500"/>'),
+    calc: g('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.500 11.500v.01M12 11.500v.01M15.500 11.500v.01M8.500 15v.01M12 15v.01M15.500 15v.01M8.500 18v.01M12 18v.01M15.500 18v.01"/>'),
+    doc: g('<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>'),
+    cert: g('<rect x="4" y="3" width="13" height="18" rx="2"/><path d="M7 8h7M7 12h5"/><circle cx="17" cy="16" r="3"/><path d="M15.500 18.500L15 22l2-1 2 1-.5-3.500"/>'),
+    dot: g('<circle cx="12" cy="12" r="3"/>')
+  };
+  return { icon: icon, ui: ui, flame: flame, bolt: bolt, N: N, Y: Y, O: O, R: R, B: B, S: S, S2: S2, SAND: SAND };
+})();
+
+/* UI strings, flags and scene drawings */
+var C = (function () {
+  var S = {
+    tag: [['Decode', 'Understand', 'Stay Safe'], ['فكّ الرموز', 'افهم', 'ابقَ آمنًا']],
+    selectSystem: { en: 'Select Marking System', ar: 'اختر نظام العلامات' },
+    subATEX: { en: 'European', ar: 'أوروبي' },
+    subIECEx: { en: 'International', ar: 'دولي' },
+    subNEC: { en: 'N. America', ar: 'أمريكا الشمالية' },
+    fMarking: { en: 'Ex Marking:', ar: 'علامة Ex:' },
+    fIP: { en: 'IP Rating:', ar: 'درجة IP:' },
+    fCert: { en: 'Certificate Number (Optional):', ar: 'رقم الشهادة (اختياري):' },
+    explain: { en: 'Explain', ar: 'اشرح' },
+    tryEx: { en: 'Try an example', ar: 'جرّب مثالًا' },
+    clear: { en: 'Clear fields', ar: 'امسح الحقول' },
+    errEmpty: { en: 'Type a marking to explain.', ar: 'اكتب علامة لشرحها.' },
+    nBasics: { en: 'Ex Basics', ar: 'أساسيات Ex' },
+    nAreas: { en: 'Hazardous Areas', ar: 'المناطق الخطرة' },
+    nTypes: { en: 'Protection Types', ar: 'أنواع الحماية' },
+    nIP: { en: 'IP Rating Decoder', ar: 'فك رموز IP' },
+    foot: { en: 'Explosion Protection Made Easy', ar: 'الحماية من الانفجار ببساطة' },
+    about: { en: 'About and disclaimer', ar: 'حول التطبيق وإخلاء المسؤولية' },
+    back: { en: 'Back', ar: 'رجوع' },
+    result: { en: 'Result', ar: 'النتيجة' },
+    zonesLbl: { en: 'Suitable zones:', ar: 'المناطق المناسبة:' },
+    partsH: { en: 'The marking, part by part', ar: 'العلامة جزءًا جزءًا' },
+    ipH: { en: 'IP rating', ar: 'درجة IP' },
+    certH: { en: 'Certificate number', ar: 'رقم الشهادة' },
+    checksH: { en: 'Things to check', ar: 'أشياء تستحق المراجعة' },
+    more: { en: 'More detail', ar: 'تفاصيل أكثر' },
+    solid: { en: 'Solids and dust', ar: 'الأجسام الصلبة والغبار' },
+    water: { en: 'Water', ar: 'الماء' },
+    unrecT: { en: 'This marking was not recognized.', ar: 'لم يتم التعرف على هذه العلامة.' },
+    unrecH: { en: 'Check the spelling and the system you picked. ATEX markings start with a group and category, such as II 2G. IECEx markings start with Ex. NEC and CEC markings start with Class.', ar: 'راجع الكتابة ونظام العلامات الذي اخترته. علامات ATEX تبدأ بمجموعة وفئة مثل II 2G. وعلامات IECEx تبدأ بـ Ex. وعلامات NEC وCEC تبدأ بـ Class.' },
+    unkTok: { en: 'Not recognized in the marking:', ar: 'غير معروف في العلامة:' },
+    ipBad: { en: 'Not recognized as an IP code:', ar: 'غير معروف كرمز IP:' },
+    certUnk: { en: 'This number format is not recognized. The app reads IECEx and ATEX style numbers, and a few North American ones.', ar: 'صيغة هذا الرقم غير معروفة. يقرأ التطبيق أرقام الشهادات بنمط IECEx وATEX، وبعض الأنماط الأمريكية.' },
+    disc1: { en: 'This app explains the parts of the marking only. It does not check that a certificate is genuine or current.', ar: 'يشرح هذا التطبيق أجزاء العلامة فقط، ولا يتحقق من صحة الشهادة أو سريانها.' },
+    disc2: { en: 'It is for learning. For any real decision, rely on the certificate, the manual and a qualified engineer.', ar: 'التطبيق للتعلّم. لأي قرار فعلي اعتمد على الشهادة والدليل ومهندس مؤهل.' },
+    again: { en: 'Explain another marking', ar: 'اشرح علامة أخرى' },
+    sysWord: { en: 'System', ar: 'النظام' },
+    basicsT: { en: 'Ex Basics', ar: 'أساسيات Ex' },
+    basicsL: { en: 'Everything you need to read an explosion-protection nameplate, from the idea behind it to the golden rules.', ar: 'كل ما تحتاجه لقراءة لوحة بيانات معدة محمية من الانفجار، من الفكرة الأساسية إلى القواعد الذهبية.' },
+    areasT: { en: 'Hazardous Areas', ar: 'المناطق الخطرة' },
+    areasL: { en: 'How sites are divided by risk, which gases and dusts matter, and how hot equipment may get.', ar: 'كيف تُقسَّم المواقع حسب الخطورة، وأي الغازات والأغبرة تهم، وإلى أي درجة يجوز أن تسخن المعدة.' },
+    typesT: { en: 'Protection Types', ar: 'أنواع الحماية' },
+    typesL: { en: 'The letters after Ex tell you how the equipment stays safe. Tap a card for more.', ar: 'الحروف بعد Ex تخبرك كيف تبقى المعدة آمنة. اضغط على أي بطاقة للمزيد.' },
+    ipT: { en: 'IP Rating Decoder', ar: 'فك رموز IP' },
+    ipL: { en: 'IP stands for ingress protection. The first digit is about solids and dust, the second about water.', ar: 'IP اختصار الحماية من الدخول. الرقم الأول عن الأجسام الصلبة والغبار، والثاني عن الماء.' },
+    aboutT: { en: 'About this app', ar: 'حول التطبيق' }
+  };
+
+  function starPath(cx, cy, r) {
+    var p = [];
+    for (var k = 0; k < 10; k++) {
+      var a = Math.PI * k / 5, rr = k % 2 ? r * 0.4 : r;
+      p.push((cx + rr * Math.sin(a)).toFixed(2) + ',' + (cy - rr * Math.cos(a)).toFixed(2));
+    }
+    return p.join(' ');
+  }
+  var euStars = '';
+  for (var i = 0; i < 12; i++) {
+    var an = i * Math.PI / 6;
+    euStars += '<polygon points="' + starPath(26 + 11 * Math.sin(an), 18 - 11 * Math.cos(an), 2.4) + '" fill="#FFCC00"/>';
+  }
+  var FLAG_EU = '<svg viewBox="0 0 52 36" aria-hidden="true" focusable="false"><rect width="52" height="36" rx="2" fill="#0B3FA8" stroke="#0B1B3F" stroke-width="1.5"/>' + euStars + '</svg>';
+  var FLAG_WORLD = '<svg viewBox="0 0 52 36" aria-hidden="true" focusable="false"><circle cx="26" cy="18" r="16" fill="#CFE2F7" stroke="#1F4E9C" stroke-width="2.5"/><ellipse cx="26" cy="18" rx="7" ry="16" fill="none" stroke="#1F4E9C" stroke-width="2.2"/><path d="M10 18h32M12 10h28M12 26h28M26 2v32" fill="none" stroke="#1F4E9C" stroke-width="2.2"/></svg>';
+  var usStripes = '';
+  for (var s2 = 0; s2 < 13; s2++) usStripes += '<rect x="0" y="' + (s2 * 18 / 13).toFixed(2) + '" width="25" height="' + (18 / 13 + 0.05).toFixed(2) + '" fill="' + (s2 % 2 ? '#fff' : '#B22234') + '"/>';
+  var usStars = '';
+  for (var r = 0; r < 4; r++) for (var c = 0; c < 5; c++) usStars += '<circle cx="' + (2 + c * 2.1) + '" cy="' + (1.8 + r * 2.1) + '" r=".6" fill="#fff"/>';
+  var FLAG_NA = '<svg viewBox="0 0 52 36" aria-hidden="true" focusable="false"><g transform="translate(0 9)">' + usStripes + '<rect width="11.5" height="9.7" fill="#3C3B6E"/>' + usStars + '</g><g transform="translate(27 9)"><rect width="25" height="18" fill="#fff"/><rect width="6" height="18" fill="#D52B1E"/><rect x="19" width="6" height="18" fill="#D52B1E"/><g transform="translate(12.5 9.6) scale(.95)"><polygon points="0,-8 1.5,-4.5 4.5,-5.5 3.5,-1.5 6.5,-2 5,1 7,3 2,3.5 2.5,6 .8,5.5 .8,8.5 -.8,8.5 -.8,5.5 -2.5,6 -2,3.5 -7,3 -5,1 -6.5,-2 -3.5,-1.5 -4.5,-5.5 -1.5,-4.5" fill="#D52B1E"/></g></g></svg>';
+
+  var SKYLINE = (function () {
+    var o = '<svg class="skyline" viewBox="0 0 400 130" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false"><g fill="#07112B">';
+    var towers = [[8, 40, 16], [30, 20, 14], [52, 60, 12], [96, 30, 18], [130, 50, 12], [160, 10, 14], [200, 44, 16], [240, 24, 12], [270, 56, 14], [310, 18, 16], [346, 40, 12], [372, 28, 16]];
+    towers.forEach(function (t) { o += '<rect x="' + t[0] + '" y="' + t[1] + '" width="' + t[2] + '" height="' + (130 - t[1]) + '"/>'; });
+    o += '<rect x="0" y="100" width="400" height="30"/><rect x="70" y="84" width="24" height="46"/><rect x="180" y="90" width="26" height="40"/><rect x="290" y="88" width="30" height="42"/></g><g fill="#F5C518">';
+    towers.forEach(function (t) { for (var y = t[1] + 8; y < 100; y += 14) o += '<rect x="' + (t[0] + 3) + '" y="' + y + '" width="2.5" height="2.5"/><rect x="' + (t[0] + t[2] - 6) + '" y="' + (y + 5) + '" width="2.5" height="2.5"/>'; });
+    o += '</g></svg>';
+    return o;
+  })();
+
+  /* ---------- scenes ---------- */
+  function txt(x, y, s, o) { o = o || {}; return '<text x="' + x + '" y="' + y + '" text-anchor="' + (o.a || 'middle') + '" font-family="Barlow, Cairo, Arial, sans-serif" font-size="' + (o.s || 13) + '" font-weight="' + (o.w || 600) + '" fill="' + (o.f || '#0B1B3F') + '">' + s + '</text>'; }
+  var NS = ' stroke="#0B1B3F" stroke-width="2.4" stroke-linejoin="round"';
+
+  function triangle(lang) {
+    var ar = lang === 'ar';
+    var L = ar ? ['وقود', 'أكسجين', 'شرارة', 'انفجار'] : ['Fuel', 'Oxygen', 'Spark', 'Explosion'];
+    return '<svg style="direction:ltr" viewBox="0 0 300 190" role="img" aria-label="' + (ar ? 'مثلث الانفجار' : 'Explosion triangle') + '"><polygon points="150,18 34,168 266,168" fill="#FFE9A8"' + NS + '/>' +
+      '<circle cx="150" cy="36" r="27" fill="#FF8A7E"' + NS + '/>' + txt(150, 41, L[0], { s: 14 }) +
+      '<circle cx="50" cy="160" r="27" fill="#7FC8FF"' + NS + '/>' + txt(50, 165, L[1], { s: 13 }) +
+      '<circle cx="250" cy="160" r="27" fill="#F5C518"' + NS + '/>' + txt(250, 165, L[2], { s: 14 }) +
+      '<g transform="translate(150 112) scale(1.5)">' + IC.flame(0, 0, 1) + '</g>' + txt(150, 150, L[3], { s: 14 }) + '</svg>';
+  }
+
+  function legendRows(lang, x0, mirror) {
+    var ar = lang === 'ar';
+    var rows = ar
+      ? [['المنطقة', 'دائمًا أو لفترات طويلة'], ['المنطقة', 'أحيانًا في التشغيل العادي'], ['المنطقة', 'نادرًا ولفترة قصيرة']]
+      : [['Zone', 'Always or for long periods'], ['Zone', 'Sometimes, in normal use'], ['Zone', 'Rarely, and only briefly']];
+    return rows;
+  }
+  function zoneScene(kind, lang) {
+    var ar = lang === 'ar', dust = kind === 'dust';
+    var nums = dust ? ['20', '21', '22'] : ['0', '1', '2'];
+    var rows = legendRows(lang);
+    var cols = ['#FF6B5E', '#FFB066', '#FFE07A'];
+    var o = '<svg style="direction:ltr" viewBox="0 0 340 176" role="img" aria-label="' + (ar ? 'رسم توضيحي للمناطق' : 'Zones illustration') + '">';
+    o += '<rect x="0" y="150" width="340" height="26" fill="#9C8A66"/>';
+    if (!dust) {
+      o += '<ellipse cx="86" cy="54" rx="80" ry="50" fill="#FFE07A" opacity=".7"/><ellipse cx="86" cy="54" rx="52" ry="33" fill="#FFB066" opacity=".85"/><ellipse cx="86" cy="54" rx="24" ry="16" fill="#FF6B5E"/>';
+      o += '<rect x="30" y="92" width="112" height="58" rx="14" fill="#B7C1CE"' + NS + '/><rect x="80" y="58" width="12" height="36" fill="#8793A5"' + NS + '/>';
+      o += '<path d="M64 140c6-4 10 4 16 0s10 4 16 0 10 4 16 0" fill="none" stroke="#4DA3FF" stroke-width="3" stroke-linecap="round"/>';
+    } else {
+      o += '<ellipse cx="86" cy="60" rx="80" ry="52" fill="#FFE07A" opacity=".7"/><ellipse cx="86" cy="62" rx="54" ry="34" fill="#FFB066" opacity=".85"/>';
+      o += '<path d="M40 150V94q0-18 46-18t46 18v56z" fill="#B7C1CE"' + NS + '/><path d="M48 150V102q0-12 38-12t38 12v48z" fill="#FF6B5E"/>';
+      o += '<rect x="80" y="40" width="12" height="38" fill="#8793A5"' + NS + '/>';
+      o += '<circle cx="62" cy="40" r="2.5" fill="#C9A66B"/><circle cx="108" cy="46" r="3" fill="#C9A66B"/><circle cx="52" cy="62" r="2" fill="#C9A66B"/><circle cx="122" cy="62" r="2.4" fill="#C9A66B"/>';
+    }
+    var pos = dust ? [[86, 124], [86, 62], [150, 62]] : [[86, 57], [124, 56], [152, 56]];
+    nums.forEach(function (n, i) { o += txt(pos[i][0], pos[i][1], n, { s: 15, w: 700 }); });
+    var lx = ar ? 328 : 196, anc = ar ? 'end' : 'start', cx = ar ? 334 : 190;
+    var ty = [38, 88, 138];
+    rows.forEach(function (rw, i) {
+      var yy = ty[i];
+      var cxx = ar ? 330 : 188;
+      o += '<circle cx="' + cxx + '" cy="' + (yy - 4) + '" r="7" fill="' + cols[i] + '"' + NS + '/>';
+      o += txt(ar ? 316 : 202, yy - 2, rw[0] + ' ' + nums[i], { a: anc, s: 15, w: 700, f: '#0B1B3F' });
+      o += txt(ar ? 316 : 202, yy + 16, rw[1], { a: anc, s: 11, w: 500, f: '#2A3B63' });
+    });
+    return o + '</svg>';
+  }
+
+  /* IP drawings (48x48) */
+  function ipSolid(d) {
+    var inner = '';
+    if (d === 'X' || d === '0') inner = '<circle cx="24" cy="24" r="13" fill="none" stroke="#8793A5" stroke-width="3" stroke-dasharray="4 4"/><text x="24" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#8793A5" font-family="Arial">' + (d === 'X' ? 'X' : '0') + '</text>';
+    else if (d === '1') inner = '<circle cx="24" cy="24" r="15" fill="#FFB066"' + NS + '/><path d="M8 40L40 8" stroke="#E5484D" stroke-width="3"/>';
+    else if (d === '2') inner = '<circle cx="24" cy="24" r="10" fill="#FFB066"' + NS + '/><path d="M8 40L40 8" stroke="#E5484D" stroke-width="3"/>';
+    else if (d === '3') inner = '<circle cx="24" cy="24" r="6" fill="#FFB066"' + NS + '/><path d="M8 40L40 8" stroke="#E5484D" stroke-width="3"/>';
+    else if (d === '4') inner = '<circle cx="24" cy="24" r="3.5" fill="#FFB066"' + NS + '/><path d="M8 40L40 8" stroke="#E5484D" stroke-width="3"/>';
+    else if (d === '5') inner = '<rect x="8" y="10" width="32" height="28" rx="4" fill="#EAF3FF"' + NS + '/><circle cx="16" cy="18" r="1.6" fill="#C9A66B"/><circle cx="30" cy="22" r="1.6" fill="#C9A66B"/><circle cx="22" cy="31" r="1.6" fill="#C9A66B"/><circle cx="33" cy="32" r="1.6" fill="#C9A66B"/>';
+    else inner = '<rect x="8" y="10" width="32" height="28" rx="4" fill="#EAF3FF"' + NS + '/><path d="M16 24l6 6 12-12" fill="none" stroke="#3FBF8A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="8" r="1.6" fill="#C9A66B"/><circle cx="44" cy="12" r="1.6" fill="#C9A66B"/><circle cx="42" cy="42" r="1.6" fill="#C9A66B"/>';
+    return '<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">' + inner + '</svg>';
+  }
+  function drop(x, y, s) { return '<path transform="translate(' + x + ' ' + y + ') scale(' + s + ')" d="M0-9c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z" fill="#4DA3FF" stroke="#0B1B3F" stroke-width="1.6"/>'; }
+  function ipWater(d) {
+    var i = '';
+    if (d === '0' || d === 'X') i = '<g opacity=".7">' + drop(24, 24, 1.4) + '</g><path d="M10 38L38 10" stroke="#8793A5" stroke-width="3"/>';
+    else if (d === '1') i = drop(24, 14, 1) + drop(24, 36, 1) + '<path d="M24 22v6" stroke="#4DA3FF" stroke-width="2"/>';
+    else if (d === '2') i = '<g transform="rotate(15 24 24)">' + drop(24, 14, 1) + drop(24, 36, 1) + '</g>';
+    else if (d === '3') i = '<path d="M10 8l8 22M22 6l8 24M34 8l8 22" stroke="#4DA3FF" stroke-width="3" stroke-linecap="round"/><path d="M6 40h36" stroke="#0B1B3F" stroke-width="2.4"/>';
+    else if (d === '4') i = '<path d="M24 38V22M24 22l-12-8M24 22l12-8M24 22l-6-12M24 22l6-12" stroke="#4DA3FF" stroke-width="3" stroke-linecap="round"/><path d="M6 40h36" stroke="#0B1B3F" stroke-width="2.4"/>';
+    else if (d === '5') i = '<path d="M4 24h30" stroke="#4DA3FF" stroke-width="5" stroke-linecap="round"/><rect x="36" y="12" width="8" height="24" rx="2" fill="#B7C1CE" stroke="#0B1B3F" stroke-width="2"/>';
+    else if (d === '6') i = '<path d="M4 17h28M4 24h30M4 31h28" stroke="#4DA3FF" stroke-width="5" stroke-linecap="round"/><rect x="36" y="10" width="8" height="28" rx="2" fill="#B7C1CE" stroke="#0B1B3F" stroke-width="2"/>';
+    else if (d === '7') i = '<path d="M4 16q5-4 10 0t10 0 10 0 10 0V44H4z" fill="#7FC8FF" stroke="#0B1B3F" stroke-width="2"/><rect x="16" y="24" width="16" height="12" rx="2" fill="#B7C1CE" stroke="#0B1B3F" stroke-width="2"/>';
+    else if (d === '8') i = '<path d="M4 10q5-4 10 0t10 0 10 0 10 0V44H4z" fill="#4DA3FF" stroke="#0B1B3F" stroke-width="2"/><rect x="16" y="28" width="16" height="12" rx="2" fill="#B7C1CE" stroke="#0B1B3F" stroke-width="2"/><path d="M42 14v8m-3-3l3 3 3-3" stroke="#0B1B3F" stroke-width="2" fill="none"/>';
+    else i = '<path d="M4 24h28" stroke="#FF8A3D" stroke-width="5" stroke-linecap="round"/><rect x="36" y="10" width="8" height="28" rx="2" fill="#B7C1CE" stroke="#0B1B3F" stroke-width="2"/><circle cx="12" cy="10" r="5" fill="#E5484D" stroke="#0B1B3F" stroke-width="1.6"/>';
+    return '<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">' + i + '</svg>';
+  }
+
+  return { S: S, FLAG_EU: FLAG_EU, FLAG_WORLD: FLAG_WORLD, FLAG_NA: FLAG_NA, SKYLINE: SKYLINE, triangle: triangle, zoneScene: zoneScene, ipSolid: ipSolid, ipWater: ipWater };
+})();
+
+/* Lesson screens: Ex Basics, Hazardous Areas, Protection Types, IP Decoder, About */
+function L(en, ar) { return { en: en, ar: ar }; }
+function P(o) { return '<p>' + T(o) + '</p>'; }
+function card(title, body) { return '<section class="card"><h3>' + T(title) + '</h3>' + body + '</section>'; }
+function pageHead(title, lead) { return '<h1 class="ph1">' + T(title) + '</h1><p class="lead">' + T(lead) + '</p>'; }
+function ulist(items) { return '<ul class="list">' + items.map(function (x) { return '<li>' + IC.ui.check + '<span>' + T(x) + '</span></li>'; }).join('') + '</ul>'; }
+function ill(svg) { return '<div class="ill">' + svg + '</div>'; }
+function table(head, rows) {
+  return '<div class="scroll"><table class="tbl"><thead><tr>' + head.map(function (h) { return '<th>' + T(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    rows.map(function (r) { return '<tr>' + r.map(function (c, i) { return '<td>' + (typeof c === 'string' ? (i === 0 ? '<span class="chip">' + c + '</span>' : '<span class="ltr">' + c + '</span>') : T(c)) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+}
+
+var ANAT = null;
+function anatParts() {
+  if (!ANAT) ANAT = ExEngine.analyze('ATEX', 'II 2G Ex db IIC T6 Gb').parts;
+  return ANAT;
+}
+function anatDetail(i) {
+  var p = anatParts()[i];
+  return '<b>' + T(p.title) + '</b><span>' + T(p.text) + '</span>';
+}
+var ANAT_ROLE = [
+  L('Who: the equipment group', 'من: مجموعة المعدات'),
+  L('How strong: the category', 'ما قوتها: الفئة'),
+  L('What: explosion-protected', 'ماذا: محمية من الانفجار'),
+  L('How: the protection type', 'كيف: نوع الحماية'),
+  L('Which gas: the gas group', 'أي غاز: مجموعة الغاز'),
+  L('How hot: the temperature class', 'كم الحرارة: فئة الحرارة'),
+  L('How safe: the protection level', 'ما الأمان: مستوى الحماية')
+];
+
+function viewBasics() {
+  var h = pageHead(S.basicsT, S.basicsL);
+
+  h += card(L('How an explosion starts', 'كيف يبدأ الانفجار'),
+    ill(C.triangle(state.lang)) +
+    P(L('An explosion needs three things at the same moment: something that burns (a gas, a vapor or a dust), oxygen from the air, and a source of ignition such as a spark or a hot surface. Remove any one of them and there is no explosion.', 'يحتاج الانفجار إلى ثلاثة أشياء في اللحظة نفسها: مادة تحترق (غاز أو بخار أو غبار)، وأكسجين من الهواء، ومصدر اشتعال مثل شرارة أو سطح ساخن. إذا أزلت واحدًا منها فلا يحدث انفجار.')) +
+    P(L('In a refinery or a flour mill you cannot remove the fuel or the air. So explosion-protected (Ex) equipment works on the third side: it makes sure the equipment itself can never be the spark.', 'في معمل تكرير أو مطحنة دقيق لا يمكنك إزالة الوقود ولا الهواء. لذلك تعمل المعدات المحمية من الانفجار (Ex) على الضلع الثالث: تضمن ألا تكون المعدة نفسها هي الشرارة.')));
+
+  h += card(L('Why ordinary equipment is not enough', 'لماذا لا تكفي المعدات العادية'),
+    P(L('A motor, a switch, a light fitting or even a mobile phone can make small sparks or get hot. In a normal workshop that does no harm. Next to a gas leak it can be the trigger.', 'المحرك والمفتاح الكهربائي وكشاف الإنارة وحتى الهاتف المحمول قد تُصدر شرارة صغيرة أو تسخن. في ورشة عادية لا ضرر من ذلك، أما بجوار تسرّب غاز فقد تكون هي الشرارة الأولى.')) +
+    P(L('Static electricity and plain friction count too. That is why hazardous areas have their own rules for tools, clothing and cables, not only for machines.', 'والكهرباء الساكنة والاحتكاك العادي يُحسبان أيضًا. ولهذا فللمناطق الخطرة قواعدها الخاصة بالأدوات والملابس والكابلات، وليس بالماكينات وحدها.')));
+
+  h += card(L('Three systems you will meet', 'ثلاثة أنظمة ستقابلها'),
+    '<div class="list" style="gap:12px">' +
+    [[C.FLAG_EU, L('ATEX', 'ATEX'), L('The European rules for equipment in explosive atmospheres (EU directive 2014/34/EU). The marking starts with a group and a category, such as II 2G, and the equipment normally also carries a CE mark.', 'القواعد الأوروبية للمعدات في الأجواء المتفجرة (توجيه الاتحاد الأوروبي 2014/34/EU). تبدأ العلامة بمجموعة وفئة مثل II 2G، وتحمل المعدة عادة علامة CE أيضًا.')],
+    [C.FLAG_WORLD, L('IECEx', 'IECEx'), L('An international certification scheme. Its markings follow the IEC 60079 standards and start with Ex, as in Ex db IIC T4 Gb. It has no group or category part.', 'نظام اعتماد دولي. تتبع علاماته معايير IEC 60079 وتبدأ بـ Ex كما في Ex db IIC T4 Gb. وليس فيها جزء المجموعة والفئة.')],
+    [C.FLAG_NA, L('NEC and CEC', 'NEC وCEC'), L('Used in the USA (National Electrical Code) and Canada (Canadian Electrical Code). The classic style is Class, Division and Group. Newer markings can also use zones, with the AEx or Ex symbol.', 'تُستخدم في أمريكا (الكود الكهربائي الوطني) وكندا (الكود الكهربائي الكندي). الأسلوب التقليدي: الصنف والقسم والمجموعة. وقد تستخدم العلامات الأحدث المناطق أيضًا مع الرمز AEx أو Ex.')]
+    ].map(function (r) { return '<div style="display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:start"><div style="width:56px">' + r[0] + '</div><div><b>' + T(r[1]) + '</b><p class="mut" style="color:#E2E9F8">' + T(r[2]) + '</p></div></div>'; }).join('') + '</div>');
+
+  var chips = anatParts().map(function (p, i) { return '<button type="button" data-act="anat" data-i="' + i + '" class="' + (i === 0 ? 'on' : '') + '">' + p.code + '</button>'; }).join('');
+  h += card(L('Read a marking from left to right', 'اقرأ العلامة من اليسار إلى اليمين'),
+    P(L('Tap each part of this example to see what it says.', 'اضغط على كل جزء من هذا المثال لترى ماذا يقول.')) +
+    '<div class="anat" id="anat">' + chips + '</div><div class="anat-d" id="anatd">' + anatDetail(0) + '</div>' +
+    '<ol class="list" style="margin-top:12px;counter-reset:n">' + ANAT_ROLE.map(function (r) { return '<li><span class="chip" style="height:fit-content">•</span><span>' + T(r) + '</span></li>'; }).join('') + '</ol>');
+
+  h += card(L('Golden rules', 'القواعد الذهبية'), ulist([
+    L('Match the zone. The protection level must be right for the zone where the equipment will sit.', 'طابق المنطقة. يجب أن يناسب مستوى الحماية المنطقة التي ستوضع فيها المعدة.'),
+    L('Match the gas or dust. The gas group on the equipment must equal or exceed the one in your area. IIC covers IIB and IIA.', 'طابق الغاز أو الغبار. يجب أن تساوي مجموعة الغاز على المعدة المجموعة الموجودة في منطقتك أو تزيد عليها. IIC تغطي IIB وIIA.'),
+    L('Match the temperature. The surface must stay below the ignition temperature of the gas or dust.', 'طابق الحرارة. يجب أن تبقى حرارة السطح أقل من حرارة اشتعال الغاز أو الغبار.'),
+    L('Check the ambient range and the IP rating against the real site.', 'قارن مدى حرارة المحيط ودرجة IP بظروف الموقع الفعلية.'),
+    L('Read the certificate. An X at the end of its number means special conditions of use apply.', 'اقرأ الشهادة. الحرف X في آخر رقمها يعني وجود شروط خاصة للاستخدام.'),
+    L('Do not open, repair or change the equipment unless a qualified person confirms it is safe. Follow your site permit rules.', 'لا تفتح المعدة ولا تصلحها ولا تعدّلها إلا بعد تأكيد شخص مؤهل أنها آمنة. اتبع قواعد التصاريح في موقعك.'),
+    L('Never rely on this app alone for a safety decision.', 'لا تعتمد على هذا التطبيق وحده في قرار يخص السلامة.')
+  ]));
+  return h;
+}
+
+function viewAreas() {
+  var h = pageHead(S.areasT, S.areasL);
+
+  h += card(L('Zones for gas, vapor and mist', 'مناطق الغاز والبخار والرذاذ'),
+    ill(C.zoneScene('gas', state.lang)) +
+    P(L('Zones say how likely an explosive gas atmosphere is. The lower the number, the higher the risk and the stronger the equipment must be.', 'تبيّن المناطق مدى احتمال وجود جو غازي متفجر. كلما قلّ الرقم زادت الخطورة ووجب أن تكون المعدة أقوى.')) +
+    table([L('Zone', 'المنطقة'), L('A typical place', 'مكان معتاد')], [
+      ['0', L('Inside a fuel tank, above the liquid', 'داخل خزان وقود، فوق سطح السائل')],
+      ['1', L('Around a tank vent or a pump seal', 'حول فتحة تنفيس خزان أو حول جلبة مضخة')],
+      ['2', L('The wider area, where gas shows up only after a leak', 'المنطقة الأوسع، حيث لا يظهر الغاز إلا بعد تسرّب')]
+    ]));
+
+  h += card(L('Zones for dust', 'مناطق الغبار'),
+    ill(C.zoneScene('dust', state.lang)) +
+    P(L('Dust zones work the same way, with the numbers 20, 21 and 22. They apply to a cloud of dust in the air. A layer of dust on a surface is a separate danger, because it can smolder or be blown up into a cloud.', 'تعمل مناطق الغبار بالطريقة نفسها بالأرقام 20 و21 و22. وهي تخص سحابة الغبار في الهواء. أما طبقة الغبار المتراكمة على سطح فخطر منفصل، لأنها قد تتفحم أو تتطاير فتصبح سحابة.')) +
+    table([L('Zone', 'المنطقة'), L('A typical place', 'مكان معتاد')], [
+      ['20', L('Inside a silo or a hopper', 'داخل صومعة أو قادوس')],
+      ['21', L('Around a filling or emptying point', 'حول نقطة تعبئة أو تفريغ')],
+      ['22', L('Near equipment where dust may drift out after a fault', 'قرب معدات قد يتسرب منها الغبار بعد عطل')]
+    ]));
+
+  h += card(L('Class and Division (North America)', 'الصنف والقسم (أمريكا الشمالية)'),
+    P(L('The classic North American system names the type of material, then how often it is present.', 'يسمّي النظام الأمريكي التقليدي نوع المادة، ثم مدى تكرار وجودها.')) +
+    table([L('Class', 'الصنف'), L('Material', 'المادة')], [
+      ['I', L('Flammable gases and vapors', 'غازات وأبخرة قابلة للاشتعال')],
+      ['II', L('Combustible dust', 'غبار قابل للاشتعال')],
+      ['III', L('Easily ignitable fibers and flyings', 'ألياف ومواد متطايرة سهلة الاشتعال')]
+    ]) + '<div style="height:10px"></div>' +
+    table([L('Division', 'القسم'), L('Meaning', 'المعنى'), L('Roughly', 'تقريبًا')], [
+      ['1', L('Present in normal operation, or often during repairs, maintenance or leaks', 'موجودة في التشغيل العادي، أو كثيرًا أثناء الإصلاح والصيانة والتسريب'), L('Zone 0 and 1', 'المنطقة 0 و1')],
+      ['2', L('Normally contained. Appears only if something fails or leaks', 'محصورة عادة. تظهر فقط عند حدوث عطل أو تسريب'), L('Zone 2', 'المنطقة 2')]
+    ]) + '<p class="mut" style="margin-top:8px">' + T(L('The match between divisions and zones is approximate. Do not treat it as exact.', 'المطابقة بين الأقسام والمناطق تقريبية. لا تعتبرها دقيقة.')) + '</p>');
+
+  h += card(L('Gas groups', 'مجموعات الغاز'),
+    P(L('Gases differ in how easily a small spark ignites them. Equipment is tested for one group and then covers the easier ones. IIC is the most demanding.', 'تختلف الغازات في سهولة اشتعالها بشرارة صغيرة. تُختبر المعدة لمجموعة معينة، ثم تغطي المجموعات الأسهل. والمجموعة IIC هي الأشد.')) +
+    table([L('IEC', 'IEC'), L('NEC', 'NEC'), L('Typical gases', 'غازات معتادة')], [
+      ['IIA', 'D', L('Propane, methane, gasoline, many solvents', 'البروبان والميثان والبنزين وكثير من المذيبات')],
+      ['IIB', 'C', L('Ethylene', 'الإيثيلين')],
+      ['IIC', 'A, B', L('Hydrogen, acetylene', 'الهيدروجين والأسيتيلين')]
+    ]) +
+    '<p class="mut" style="margin-top:8px">' + T(L('Group I is for underground coal mines, where methane is the main danger.', 'المجموعة I مخصصة لمناجم الفحم الجوفية، حيث يكون الميثان هو الخطر الرئيسي.')) + '</p>');
+
+  h += card(L('Dust groups', 'مجموعات الغبار'),
+    table([L('IEC', 'IEC'), L('NEC', 'NEC'), L('Typical dusts', 'أغبرة معتادة')], [
+      ['IIIA', 'III', L('Combustible flyings, such as cotton lint', 'ألياف متطايرة قابلة للاشتعال مثل زغب القطن')],
+      ['IIIB', 'G', L('Non-conductive dust, such as grain, flour, wood and plastic', 'غبار غير موصل مثل الحبوب والدقيق والخشب والبلاستيك')],
+      ['IIIC', 'E, F', L('Conductive dust, such as metal powder and carbon', 'غبار موصل مثل مساحيق المعادن والكربون')]
+    ]) + '<p class="mut" style="margin-top:8px">' + T(L('The two systems do not line up one to one for dust. Treat the NEC column as a rough guide.', 'النظامان لا يتطابقان تمامًا في الغبار. اعتبر عمود NEC دليلًا تقريبيًا.')) + '</p>');
+
+  var T_ROWS = [['T1', 450], ['T2', 300], ['T3', 200], ['T4', 135], ['T5', 100], ['T6', 85]];
+  h += card(L('Temperature classes', 'فئات الحرارة'),
+    P(L('A hot surface can ignite gas without any spark. The class gives the highest surface temperature the equipment will reach. Pick a class that stays below the ignition temperature of your gas.', 'قد يشعل السطح الساخن الغاز دون أي شرارة. تحدد الفئة أعلى حرارة يصل إليها سطح المعدة. اختر فئة تبقى أقل من حرارة اشتعال غازك.')) +
+    '<div class="therm" style="margin-top:8px">' + T_ROWS.map(function (r) { return '<div class="row"><span class="chip">' + r[0] + '</span><div class="bar2" style="width:' + Math.round(r[1] / 450 * 100) + '%"></div><span class="v">' + r[1] + '°C</span></div>'; }).join('') + '</div>' +
+    '<p class="mut" style="margin-top:10px">' + T(L('A higher number is a cooler surface, so T6 is safe with more gases than T1. Dust equipment states the real temperature instead, such as T85°C.', 'الرقم الأعلى يعني سطحًا أبرد، فالفئة T6 آمنة مع غازات أكثر من T1. ومعدات الغبار تذكر الحرارة الفعلية، مثل T85°C.')) + '</p>');
+
+  h += card(L('Which equipment for which zone', 'أي معدة لأي منطقة'),
+    table([L('Zone', 'المنطقة'), L('Level', 'المستوى'), L('ATEX category', 'فئة ATEX')], [
+      ['0', 'Ga', '1G'], ['1', 'Gb', '2G'], ['2', 'Gc', '3G'],
+      ['20', 'Da', '1D'], ['21', 'Db', '2D'], ['22', 'Dc', '3D']
+    ]) + '<p class="mut" style="margin-top:8px">' + T(L('Equipment made for a more hazardous zone can also be used in a less hazardous one, but not the other way round.', 'يمكن استخدام معدة مصنوعة لمنطقة أخطر في منطقة أقل خطورة، لكن العكس غير جائز.')) + '</p>');
+  return h;
+}
+
+var TYPE_ORDER = ['d', 'e', 'i', 'm', 'p', 'o', 'q', 'n', 't', 'op', 'h', 's'];
+var TYPE_LVL = {
+  d: L('Levels: da for Zone 0, db for Zone 1, dc for Zone 2.', 'المستويات: da للمنطقة 0، وdb للمنطقة 1، وdc للمنطقة 2.'),
+  e: L('Levels: eb for Zone 1, ec for Zone 2.', 'المستويات: eb للمنطقة 1، وec للمنطقة 2.'),
+  i: L('Levels: ia for Zone 0, ib for Zone 1, ic for Zone 2.', 'المستويات: ia للمنطقة 0، وib للمنطقة 1، وic للمنطقة 2.'),
+  m: L('Levels: ma for Zone 0, mb for Zone 1, mc for Zone 2.', 'المستويات: ma للمنطقة 0، وmb للمنطقة 1، وmc للمنطقة 2.'),
+  p: L('Variants: px and py for Zone 1, pz for Zone 2.', 'الأنواع: px وpy للمنطقة 1، وpz للمنطقة 2.'),
+  o: L('Levels: ob for Zone 1, oc for Zone 2.', 'المستويات: ob للمنطقة 1، وoc للمنطقة 2.'),
+  q: L('Level: qb for Zone 1.', 'المستوى: qb للمنطقة 1.'),
+  n: L('For Zone 2 only.', 'للمنطقة 2 فقط.'),
+  t: L('Levels: ta for Zone 20, tb for Zone 21, tc for Zone 22.', 'المستويات: ta للمنطقة 20، وtb للمنطقة 21، وtc للمنطقة 22.'),
+  op: L('Variants: op is, op pr and op sh.', 'الأنواع: op is وop pr وop sh.'),
+  h: L('Used for mechanical equipment such as pumps and gearboxes.', 'تُستخدم للمعدات الميكانيكية مثل المضخات وصناديق التروس.'),
+  s: L('Rare, and mostly on older equipment.', 'نادرة، وتظهر غالبًا على المعدات الأقدم.')
+};
+function viewTypes() {
+  var h = pageHead(S.typesT, S.typesL);
+  h += card(L('Three ideas behind every type', 'ثلاث أفكار وراء كل نوع'), ulist([
+    L('Do not make a spark or heat (e, i, n, op). The equipment simply cannot ignite the atmosphere.', 'لا تُولّد شرارة ولا حرارة (e وi وn وop). المعدة ببساطة لا تستطيع إشعال الجو المحيط.'),
+    L('Keep the atmosphere away (p, o, q, m, t). A barrier of air, oil, powder, compound or a dust-tight shell separates the two.', 'أبقِ الجو المتفجر بعيدًا (p وo وq وm وt). يفصل بينهما حاجز من هواء أو زيت أو مسحوق أو مركّب أو غلاف محكم للغبار.'),
+    L('Contain the explosion (d). If gas gets in and burns, the housing holds it and cools the flame.', 'احتوِ الانفجار (d). إن دخل الغاز واشتعل يحتفظ الغلاف به ويبرّد اللهب.')
+  ]));
+  TYPE_ORDER.forEach(function (k) {
+    var b = ExEngine.PROT[k];
+    h += '<section class="part"><div class="ico">' + IC.icon(b.icon) + '</div><div><div class="ph"><span class="chip">Ex ' + k + '</span><b>' + T(b.n) + '</b></div><p>' + T(b.x) + '</p>' +
+      '<details><summary>' + T(S.more) + '</summary><p>' + T(b.m.en ? b.m : L('', '')) + '</p><p>' + T(TYPE_LVL[k]) + '</p></details></div></section>';
+  });
+  h += card(L('Two types in one device', 'نوعان في جهاز واحد'),
+    P(L('Many products combine types. Ex db eb means the main chamber is flameproof (db) and the terminal box is increased safety (eb). Read each part on its own, then picture the product as a whole.', 'تجمع منتجات كثيرة بين أنواع. العلامة Ex db eb تعني أن الحجرة الرئيسية مقاومة للّهب (db) وأن صندوق التوصيل بأمان مُعزَّز (eb). اقرأ كل جزء على حدة ثم تخيّل المنتج كاملًا.')) +
+    P(L('Older equipment may say Ex d where new equipment says Ex db. The idea is the same.', 'قد تكتب المعدات الأقدم Ex d حيث تكتب الحديثة Ex db. والفكرة واحدة.')));
+  return h;
+}
+
+var IPS = { d1: '6', d2: '6' };
+function ipPickerBody() {
+  var a = IPS.d1, b = IPS.d2;
+  var E = ExEngine;
+  return '<div class="big-ip">IP' + a + b + '</div>' +
+    '<div class="ipc"><div class="r">' + C.ipSolid(a) + '<div><b>' + T(S.solid) + '</b><small>' + T(E.IP1[a]) + '</small></div></div>' +
+    '<div class="r">' + C.ipWater(b) + '<div><b>' + T(S.water) + '</b><small>' + T(E.IP2[b]) + '</small></div></div></div>';
+}
+function digitRow(which, list) {
+  return '<div class="digits">' + list.map(function (d) { return '<button type="button" data-act="ipd" data-w="' + which + '" data-d="' + d + '" class="' + (IPS[which] === d ? 'on' : '') + '" aria-pressed="' + (IPS[which] === d) + '">' + d + '</button>'; }).join('') + '</div>';
+}
+function ipItemsHtml(res) {
+  var o = '';
+  res.items.forEach(function (it) {
+    o += '<div class="ipc"><span class="chip big" style="justify-self:start">' + it.code + '</span>' +
+      '<div class="r">' + C.ipSolid(it.d1) + '<div><b>' + T(S.solid) + '</b><small>' + T(it.solid) + '</small></div></div>' +
+      '<div class="r">' + C.ipWater(it.d2) + '<div><b>' + T(S.water) + '</b><small>' + T(it.water) + '</small></div></div>' +
+      it.extra.map(function (x) { return '<small style="color:var(--muted)">' + T(x) + '</small>'; }).join('') + '</div>';
+  });
+  if (res.bad.length) o += '<div class="warn bad">' + IC.ui.warn + '<div>' + T(S.ipBad) + ' <span class="ltr mono">' + esc(res.bad.join(', ')) + '</span></div></div>';
+  return o;
+}
+function viewIP() {
+  var h = pageHead(S.ipT, S.ipL);
+  h += card(L('Pick the two digits', 'اختر الرقمين'),
+    '<p class="mut">' + T(L('First digit: solids and dust', 'الرقم الأول: الأجسام الصلبة والغبار')) + '</p>' + digitRow('d1', ['0', '1', '2', '3', '4', '5', '6', 'X']) +
+    '<p class="mut">' + T(L('Second digit: water', 'الرقم الثاني: الماء')) + '</p>' + digitRow('d2', ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'X']) +
+    '<div id="ippick">' + ipPickerBody() + '</div>');
+  h += card(L('Or type a code', 'أو اكتب رمزًا'),
+    '<div class="inline"><input id="ipcode" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="IP66/IP67" value="IP69K"><button type="button" data-act="ipdec">' + T(L('Decode', 'فكّ')) + '</button></div><div id="ipout" style="margin-top:10px">' + ipItemsHtml(ExEngine.decodeIP('IP69K')) + '</div>');
+  var s = '', w = '';
+  for (var i = 0; i <= 6; i++) s += '<div class="r" style="display:grid;grid-template-columns:48px 28px minmax(0,1fr);gap:8px;align-items:center;margin-bottom:6px"><span style="width:48px;height:48px;background:var(--tile);border-radius:10px;display:block">' + C.ipSolid(String(i)) + '</span><span class="chip">' + i + '</span><span style="font-size:14px;color:#E2E9F8">' + T(ExEngine.IP1[i]) + '</span></div>';
+  for (var j = 0; j <= 9; j++) w += '<div class="r" style="display:grid;grid-template-columns:48px 28px minmax(0,1fr);gap:8px;align-items:center;margin-bottom:6px"><span style="width:48px;height:48px;background:var(--tile);border-radius:10px;display:block">' + C.ipWater(String(j)) + '</span><span class="chip">' + j + '</span><span style="font-size:14px;color:#E2E9F8">' + T(ExEngine.IP2[j]) + '</span></div>';
+  h += card(L('First digit: solids and dust', 'الرقم الأول: الأجسام الصلبة والغبار'), s);
+  h += card(L('Second digit: water', 'الرقم الثاني: الماء'), w);
+  h += card(L('Good to know', 'من المفيد معرفته'), ulist([
+    L('An X means the digit was not tested. IPX7 says nothing about dust.', 'الحرف X يعني أن الرقم لم يُختبر. فـ IPX7 لا يقول شيئًا عن الغبار.'),
+    L('A rating covers the digits you see. IP67 does not promise IP65. Each water test is separate.', 'تغطي الدرجة الأرقام المكتوبة فقط. IP67 لا تعد بـ IP65. فكل اختبار ماء مستقل.'),
+    L('In North America enclosures often carry a NEMA type, such as 4X, instead of an IP rating. The two do not convert one to one.', 'في أمريكا الشمالية تحمل الأغلفة غالبًا نوع NEMA مثل 4X بدلًا من درجة IP. والاثنان لا يتحوّلان بشكل مباشر.'),
+    L('IP only describes dust and water. It says nothing about explosion protection.', 'تصف IP الغبار والماء فقط. ولا تقول شيئًا عن الحماية من الانفجار.')
+  ]));
+  return h;
+}
+
+function viewAbout() {
+  var h = '<h1 class="ph1">' + T(S.aboutT) + '</h1>';
+  h += card(L('What it does', 'ماذا يفعل'), P(L('Ex Nameplate Analyzer reads the marking on an explosion-protected nameplate and explains each part in plain words, in English and Arabic. It works offline and collects no data.', 'يقرأ Ex Nameplate Analyzer العلامة المكتوبة على لوحة بيانات معدة محمية من الانفجار ويشرح كل جزء منها بكلمات بسيطة بالعربية والإنجليزية. يعمل دون إنترنت ولا يجمع أي بيانات.')));
+  h += card(L('What it does not do', 'ما لا يفعله'), ulist([
+    L('It does not check that a certificate is genuine, valid or current.', 'لا يتحقق من أن الشهادة حقيقية أو صالحة أو سارية.'),
+    L('It does not replace the standards, the certificate, the manual or a qualified engineer.', 'لا يحل محل المعايير أو الشهادة أو الدليل أو المهندس المؤهل.'),
+    L('It does not decide whether equipment is right for a particular site.', 'لا يقرر إن كانت المعدة مناسبة لموقع بعينه.')
+  ]));
+  h += card(L('Sources and ownership', 'المصادر والملكية'),
+    P(L('The explanations are original summaries written for this app. They follow the ideas of the IEC 60079 series, the ATEX directive and the North American code systems, and they do not copy the text of those documents. For exact requirements, read the official documents.', 'الشروح ملخصات أصلية كُتبت لهذا التطبيق. وهي تتبع أفكار سلسلة IEC 60079 وتوجيه ATEX وأنظمة الكودات الأمريكية، ولا تنقل نصوص تلك الوثائق. وللمتطلبات الدقيقة ارجع إلى الوثائق الرسمية.')) +
+    P(L('ATEX, IECEx, NEC, CEC and other names are the property of their owners. This app is independent and is not affiliated with or endorsed by the European Union, the IEC, NFPA or CSA Group.', 'أسماء ATEX وIECEx وNEC وCEC وغيرها ملك لأصحابها. هذا التطبيق مستقل وليس تابعًا للاتحاد الأوروبي أو IEC أو NFPA أو CSA Group ولا معتمدًا منها.')));
+  return h;
+}
+
+/* App: state, rendering, events */
+var S = C.S;
+var ADMOB_TESTING = false;
+var AD_BANNER_ID = '';
+
+var EX = {
+  ATEX: { m: 'II 2G Ex db IIC T6 Gb', ip: 'IP66', c: 'ABC14ATEX0123X', list: ['II 2G Ex db IIC T6 Gb', 'II 2D Ex tb IIIC T85°C Db IP6X', 'II 1G Ex ia IIC T4 Ga', 'II 3G Ex ec IIB T3 Gc', 'II 2G Ex db eb IIC T4 Gb', 'I M2 Ex db I Mb'] },
+  IECEx: { m: 'Ex db eb IIC T4 Gb', ip: 'IP66', c: 'IECEx ABC 24.1234X', list: ['Ex db eb IIC T4 Gb', 'Ex ia IIC T4 Ga', 'Ex tb IIIC T85°C Db', 'Ex ec IIA T3 Gc', 'Ex px IIB T4 Gb'] },
+  NEC: { m: 'Class I, Division 1, Groups C&D', ip: 'IP67', c: '1234567', list: ['Class I, Division 1, Groups C&D', 'Class II, Division 1, Groups E F G', 'Class I, Division 2, Groups A B C D T3', 'Class I, Zone 1, AEx db IIC T6 Gb', 'Class III, Division 1'] }
+};
+var state = { lang: 'en', view: 'home', sys: 'ATEX', m: EX.ATEX.m, ip: EX.ATEX.ip, c: EX.ATEX.c, err: '', result: null };
+
+try { var sl = localStorage.getItem('exlang'); if (sl === 'ar' || sl === 'en') state.lang = sl; else if ((navigator.language || '').toLowerCase().indexOf('ar') === 0) state.lang = 'ar'; } catch (e) { }
+
+function T(o) { return (o && (o[state.lang] || o.en)) || ''; }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+var $app = document.getElementById('app');
+
+function langBar(extra) {
+  return '<div class="lang" role="group" aria-label="Language"><button type="button" data-act="lang" data-l="en" class="' + (state.lang === 'en' ? 'on' : '') + '">English</button><button type="button" data-act="lang" data-l="ar" class="' + (state.lang === 'ar' ? 'on' : '') + '">العربية</button></div>';
+}
+function topBar(titleObj) {
+  return '<div class="bar"><button type="button" class="back" data-act="go" data-v="home">' + IC.ui.back + '<span>' + T(titleObj || S.back) + '</span></button>' + langBar() + '</div>';
+}
+
+function viewHome() {
+  var tg = S.tag[state.lang === 'ar' ? 1 : 0];
+  var sysBtn = function (k, flag, nm, sub) {
+    return '<button type="button" data-act="sys" data-k="' + k + '" class="' + (state.sys === k ? 'on' : '') + '" aria-pressed="' + (state.sys === k) + '">' + flag + '<span class="nm ltr">' + nm + '</span><span class="sb">' + T(sub) + '</span></button>';
+  };
+  var ph = { ATEX: ['II 2G Ex db IIC T6 Gb', 'IP66', 'ABC14ATEX0123X'], IECEx: ['Ex db eb IIC T4 Gb', 'IP66', 'IECEx ABC 24.1234X'], NEC: ['Class I, Division 1, Groups C&D', 'IP67', '1234567'] }[state.sys];
+  var field = function (id, icon, label, val, p, err) {
+    return '<div class="field"><span class="fi">' + icon + '</span><span class="sep"></span><div><label for="' + id + '">' + T(label) + '</label><input id="' + id + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(val) + '" placeholder="e.g. ' + esc(p) + '"></div>' + (err ? '<div class="err" id="err" role="alert">' + T(err) + '</div>' : '') + '</div>';
+  };
+  var ex = EX[state.sys].list.map(function (x, i) { return '<button type="button" data-act="ex" data-i="' + i + '">' + esc(x) + '</button>'; }).join('');
+  return '<header class="hero">' + C.SKYLINE + '<div class="inner"><div class="bar" style="justify-content:flex-end">' + langBar() + '</div>' +
+    '<h1 class="brand ltr"><span class="t1">Ex Nameplate</span><span class="t2">Analyzer</span></h1>' +
+    '<p class="tag">' + tg[0] + '<i></i>' + tg[1] + '<i></i>' + tg[2] + '</p></div></header>' +
+    '<div class="frame"><div class="panel"><i class="screw s1"></i><i class="screw s2"></i><i class="screw s3"></i><i class="screw s4"></i>' +
+    '<span class="plate">' + T(S.selectSystem) + '</span>' +
+    '<div class="sys">' + sysBtn('ATEX', C.FLAG_EU, 'ATEX', S.subATEX) + sysBtn('IECEx', C.FLAG_WORLD, 'IECEx', S.subIECEx) + sysBtn('NEC', C.FLAG_NA, 'NEC / CEC', S.subNEC) + '</div>' +
+    field('f-m', IC.ui.doc, S.fMarking, state.m, ph[0], state.err ? S.errEmpty : null) +
+    field('f-ip', IC.ui.shield, S.fIP, state.ip, ph[1]) +
+    field('f-c', IC.ui.cert, S.fCert, state.c, ph[2]) +
+    '<button type="button" class="go" data-act="explain"><span style="display:flex;align-items:center;gap:12px;margin-inline:auto">' + IC.ui.search + '<span>' + T(S.explain) + '</span></span><span class="chev">' + IC.ui.chev + '</span></button>' +
+    '<div class="eg"><b>' + T(S.tryEx) + '</b><div class="row">' + ex + '<button type="button" class="clr" data-act="clear">' + T(S.clear) + '</button></div></div>' +
+    '</div></div>' +
+    '<nav class="nav" aria-label="Lessons"><button type="button" data-act="go" data-v="basics">' + IC.ui.book + '<span>' + T(S.nBasics) + '</span></button>' +
+    '<button type="button" data-act="go" data-v="areas">' + IC.ui.hazard + '<span>' + T(S.nAreas) + '</span></button>' +
+    '<button type="button" data-act="go" data-v="types">' + IC.ui.shield + '<span>' + T(S.nTypes) + '</span></button>' +
+    '<button type="button" data-act="go" data-v="ip">' + IC.ui.calc + '<span>' + T(S.nIP) + '</span></button></nav>' +
+    '<p class="foot">' + T(S.foot) + '</p><button type="button" class="linkish" data-act="go" data-v="about">' + T(S.about) + '</button>';
+}
+
+function partCard(p) {
+  var more = p.more && T(p.more) ? '<details><summary>' + T(S.more) + '</summary><p>' + T(p.more) + '</p></details>' : '';
+  return '<section class="part"><div class="ico">' + IC.icon(p.icon, p.arg) + '</div><div><div class="ph"><span class="chip">' + esc(p.code) + '</span><b>' + T(p.title) + '</b></div><p>' + T(p.text) + '</p>' + more + '</div></section>';
+}
+
+function viewResult() {
+  var R = state.result, r = R.r;
+  var sysName = { ATEX: 'ATEX', IECEx: 'IECEx', NEC: 'NEC / CEC' }[R.sys];
+  var h = topBar(S.result);
+  h += '<div class="echo"><div class="sysrow"><span class="pill">' + sysName + '</span></div><div class="code">' + esc(R.m) + '</div></div>';
+  if (!r.recognized) {
+    h += '<div class="warn bad">' + IC.ui.warn + '<div><b>' + T(S.unrecT) + '</b><br>' + T(S.unrecH) + '</div></div>';
+  } else if (r.summary.length) {
+    h += '<div class="sum"><ul>' + r.summary.map(function (x) { return '<li>' + T(x) + '</li>'; }).join('') + '</ul></div>';
+  }
+  if (r.zones.length) h += '<div class="zones"><span>' + T(S.zonesLbl) + '</span>' + r.zones.map(function (z) { return '<span class="z z' + z + '">' + z + '</span>'; }).join('') + '</div>';
+  if (r.warnings.length || r.unknown.length) {
+    h += '<h2 class="h2">' + T(S.checksH) + '</h2>';
+    r.warnings.forEach(function (w) { h += '<div class="warn">' + IC.ui.warn + '<div>' + T(w) + '</div></div>'; });
+    if (r.unknown.length) h += '<div class="warn">' + IC.ui.info + '<div>' + T(S.unkTok) + ' <span class="ltr mono">' + esc(r.unknown.join(' ')) + '</span></div></div>';
+  }
+  if (r.parts.length) { h += '<h2 class="h2">' + T(S.partsH) + '</h2>'; r.parts.forEach(function (p) { h += partCard(p); }); }
+  if (r.ip) { h += '<h2 class="h2">' + T(S.ipH) + '</h2>' + ipItemsHtml(r.ip); }
+  if (r.cert) {
+    h += '<h2 class="h2">' + T(S.certH) + '</h2>';
+    if (r.cert.kind === 'unknown') h += '<div class="warn">' + IC.ui.info + '<div>' + T(S.certUnk) + '</div></div>';
+    else r.cert.parts.forEach(function (p) { h += partCard({ code: p.code, title: p.title, text: p.text, more: null, icon: /^[XU]$/.test(p.code) ? p.code.toLowerCase() : 'cert' }); });
+  }
+  h += '<div class="disc">' + IC.ui.info + '<div><p>' + T(S.disc1) + '</p><p style="margin-top:6px">' + T(S.disc2) + '</p></div></div>';
+  h += '<button type="button" class="btn2" data-act="go" data-v="home">' + T(S.again) + '</button>';
+  return h;
+}
+
+function viewLesson(fn) { return topBar(S.back) + fn(); }
+
+function viewFor(v) {
+  switch (v) {
+    case 'result': return viewResult();
+    case 'basics': return viewLesson(viewBasics);
+    case 'areas': return viewLesson(viewAreas);
+    case 'types': return viewLesson(viewTypes);
+    case 'ip': return viewLesson(viewIP);
+    case 'about': return viewLesson(viewAbout);
+    default: return viewHome();
+  }
+}
+
+function render(keepScroll) {
+  var de = document.documentElement;
+  de.lang = state.lang; de.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+  $app.innerHTML = viewFor(state.view);
+  if (!keepScroll) window.scrollTo(0, 0);
+}
+
+function route() {
+  var v = (location.hash || '').replace('#', '');
+  if (['home', 'result', 'basics', 'areas', 'types', 'ip', 'about'].indexOf(v) < 0) v = 'home';
+  if (v === 'result' && !state.result) v = 'home';
+  state.view = v;
+  render(false);
+}
+
+function go(v) { if (location.hash === '#' + v) route(); else location.hash = v; }
+
+function explain() {
+  state.m = (document.getElementById('f-m') || {}).value || state.m;
+  if (!String(state.m).trim()) { state.err = 'x'; render(true); var f = document.getElementById('f-m'); if (f) f.focus(); return; }
+  state.err = '';
+  var r = ExEngine.analyze(state.sys, state.m, state.ip, state.c);
+  state.result = { r: r, sys: state.sys, m: state.m };
+  go('result');
+}
+
+function setSystem(k) {
+  var prev = EX[state.sys];
+  var next = EX[k];
+  if (!String(state.m).trim() || state.m === prev.m) state.m = next.m;
+  if (!String(state.ip).trim() || state.ip === prev.ip) state.ip = next.ip;
+  if (!String(state.c).trim() || state.c === prev.c) state.c = next.c;
+  state.sys = k; state.err = '';
+  render(true);
+}
+
+document.addEventListener('click', function (e) {
+  var t = e.target.closest ? e.target.closest('[data-act]') : null;
+  if (!t) return;
+  var a = t.getAttribute('data-act');
+  if (a === 'lang') {
+    state.lang = t.getAttribute('data-l');
+    try { localStorage.setItem('exlang', state.lang); } catch (x) { }
+    render(true);
+  } else if (a === 'go') { go(t.getAttribute('data-v')); }
+  else if (a === 'sys') { setSystem(t.getAttribute('data-k')); }
+  else if (a === 'explain') { explain(); }
+  else if (a === 'ex') { state.m = EX[state.sys].list[parseInt(t.getAttribute('data-i'), 10)]; state.err = ''; render(true); }
+  else if (a === 'clear') { state.m = ''; state.ip = ''; state.c = ''; state.err = ''; render(true); var f = document.getElementById('f-m'); if (f) f.focus(); }
+  else if (a === 'anat') {
+    var i = parseInt(t.getAttribute('data-i'), 10);
+    var kids = t.parentNode.children; for (var k = 0; k < kids.length; k++) kids[k].className = k === i ? 'on' : '';
+    document.getElementById('anatd').innerHTML = anatDetail(i);
+  } else if (a === 'ipd') {
+    IPS[t.getAttribute('data-w')] = t.getAttribute('data-d');
+    var sibs = t.parentNode.children; for (var q = 0; q < sibs.length; q++) { var on = sibs[q] === t; sibs[q].className = on ? 'on' : ''; sibs[q].setAttribute('aria-pressed', on); }
+    document.getElementById('ippick').innerHTML = ipPickerBody();
+  } else if (a === 'ipdec') {
+    var v = document.getElementById('ipcode').value;
+    var res = ExEngine.decodeIP(v);
+    document.getElementById('ipout').innerHTML = res ? ipItemsHtml(res) : '';
+  }
+});
+document.addEventListener('input', function (e) {
+  var id = e.target.id;
+  if (id === 'f-m') { state.m = e.target.value; if (state.err) { state.err = ''; var er = document.getElementById('err'); if (er) er.remove(); } }
+  else if (id === 'f-ip') state.ip = e.target.value;
+  else if (id === 'f-c') state.c = e.target.value;
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+  var id = e.target.id;
+  if (id === 'f-m' || id === 'f-ip' || id === 'f-c') { e.preventDefault(); explain(); }
+  else if (id === 'ipcode') { e.preventDefault(); document.querySelector('[data-act="ipdec"]').click(); }
+});
+document.addEventListener('focusin', function (e) {
+  var id = e.target.id;
+  if (id === 'f-m' && e.target.value === EX[state.sys].m) { try { e.target.select(); } catch (x) { } }
+});
+window.addEventListener('hashchange', route);
+
+/* ads: stays off until an ad unit id is set, and only runs inside the Android app */
+function initAds() {
+  var AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+  if (!AdMob || !AD_BANNER_ID) return;
+  AdMob.initialize().then(function () {
+    return AdMob.requestConsentInfo().then(function (info) {
+      if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') return AdMob.showConsentForm();
+    });
+  }).then(function () {
+    document.body.style.paddingBottom = '64px';
+    return AdMob.showBanner({ adId: ADMOB_TESTING ? 'ca-app-pub-3940256099942544/6300978111' : AD_BANNER_ID, adSize: 'ADAPTIVE_BANNER', position: 'BOTTOM_CENTER', margin: 0, isTesting: ADMOB_TESTING });
+  }).catch(function () { });
+}
+
+route();
+initAds();
+
+</script>
+</body>
+</html>
