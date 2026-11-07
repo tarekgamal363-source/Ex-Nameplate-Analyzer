@@ -211,6 +211,75 @@ html[dir="rtl"] .card h3 { font-family: var(--font-ar); font-size: 17px; line-he
   .go { font-size: 30px; }
 }
 
+/* ---- one-screen home ---- */
+.deep { margin-top: 6px; border-inline-start: 3px solid var(--yellow); padding-inline-start: 10px; }
+.deep p { font-size: 14.5px; color: #E2E9F8; }
+.deep p + p { margin-top: 6px; }
+.deep b { color: var(--yellow); font-weight: 600; margin-inline-end: 4px; }
+.card h4 { font-family: var(--font-d); font-size: 19px; color: var(--yellow); margin: 12px 0 4px; }
+html[dir="rtl"] .card h4 { font-family: var(--font-ar); font-size: 16px; }
+.plain { list-style: none; padding: 0; margin: 0; }
+.plain li { font-size: 14.5px; color: #E2E9F8; padding: 4px 0; border-top: 1px solid var(--line); }
+.plain li:first-child { border-top: 0; }
+.plain li b { color: #fff; }
+.read { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.read li { font-size: 13.5px; background: rgba(255,255,255,.06); border-radius: 10px; padding: 5px 8px; }
+.home { min-height: calc(100dvh - 22px); display: flex; flex-direction: column; gap: 8px; }
+.home .hero { margin: 0; padding: 8px 12px 10px; border-radius: 16px; }
+.home .hero .bar { padding: 0 0 2px; }
+.home .hero .inner { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.home .hero .bar { order: 2; padding: 0; }
+.home .brand { order: 1; display: block; margin: 0; line-height: .95; }
+.home .brand .t1 { font-size: 24px; display: block; }
+.home .brand .t2 { font-size: 32px; display: block; margin: 0; }
+.home .tag { display: none; }
+.home .lang button { min-height: 30px; padding: 3px 12px; font-size: 13px; }
+.home .frame { padding: 6px; border-radius: 20px; }
+.home .panel { padding: 12px 10px 10px; border-radius: 14px; }
+.home .screw { display: none; }
+.home .plate { margin-bottom: 8px; padding: 2px 16px; font-size: 16px; }
+.home .sys { gap: 6px; margin-bottom: 8px; }
+.home .sys button { min-height: 62px; padding: 4px 2px; gap: 1px; }
+.home .sys svg { width: 36px; height: 24px; }
+.home .sys .nm { font-size: 16px; }
+.home .sys .sb { font-size: 11px; }
+.home .field { padding: 6px 0 4px; gap: 8px; grid-template-columns: 30px 1px minmax(0, 1fr); }
+.home .field .fi { width: 28px; height: 28px; }
+.home .field label { font-size: 16px; margin-bottom: 2px; }
+.home .field input { height: 40px; }
+.home .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.home .two .field { grid-template-columns: minmax(0, 1fr); }
+.home .two .field .fi, .home .two .field .sep { display: none; }
+.home .two .field label { font-size: 14px; }
+.home .go { min-height: 50px; font-size: 26px; margin-top: 6px; padding: 0 14px; }
+.home .go svg { width: 26px; height: 26px; }
+.home .eg { margin-top: 6px; }
+.home .eg b { display: none; }
+.home .eg .row { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.home .eg .row::-webkit-scrollbar { display: none; }
+.home .eg button { flex: none; min-height: 30px; padding: 3px 9px; }
+.home .nav { margin-top: 0; gap: 6px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.home .nav button { min-height: 76px; padding: 6px 2px; gap: 4px; font-size: 14px; }
+.home .nav svg { width: 28px; height: 28px; }
+html[dir="rtl"] .home .nav button { font-size: 12px; }
+.home .foot { margin-top: auto; font-size: 15px; }
+.home .linkish { margin: 0 auto; padding: 2px 8px; min-height: 28px; }
+@media (max-width: 360px) { .home .nav { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+#app:has(.home) { padding-block: 8px 6px; }
+.home .hero .tag { display: none; }
+.home .foot { font-size: 14px; }
+.home .nav button { min-height: 70px; }
+.home { gap: 6px; }
+.home .hero { padding: 6px 12px 6px; }
+.home .brand .t1 { font-size: 20px; } .home .brand .t2 { font-size: 28px; }
+.home .brand { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.home .brand .t1, .home .brand .t2 { display: inline; }
+.home .field input { height: 38px; }
+.home .nav button { min-height: 64px; }
+.home .go { min-height: 46px; }
+.home .linkish { font-size: 12px; min-height: 22px; padding: 0 8px; }
+
 </style>
 </head>
 <body>
@@ -369,6 +438,65 @@ function splitProt(tok) {
   return out;
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Compact-input segmenter: reads markings typed without spaces        */
+/* ------------------------------------------------------------------ */
+function segCands(s, ph, last) {
+  var c = [], m;
+  function add(re, fn) { m = re.exec(s); if (m) { var r = fn(m); if (r) c.push([m[0].length, r[0], r[1], r[2]]); } }
+  var low = s.toLowerCase();
+  add(/^(EEX|AEX|EX)/i, function (m) { return [{ EEX: 'EEx', AEX: 'AEx', EX: 'Ex' }[m[1].toUpperCase()], 'prot', 'ex']; });
+  if (ph === 'pre') {
+    add(/^CE/i, function () { return ['CE', 'pre', 'ce']; });
+    if (last === 'ce') add(/^\d{4}/, function (m) { return [m[0], 'pre', 'nb']; });
+    add(/^II(?!I)/i, function () { return ['II', 'pre', 'grp']; });
+    add(/^I(?!I)/i, function () { return ['I', 'pre', 'grp']; });
+    add(/^(M[12]|[123])(GD|DG|G|D)/i, function (m) { return [m[1].toUpperCase() + m[2].toUpperCase(), 'pre', 'cat']; });
+    add(/^(M[12]|[123])/i, function (m) { return [m[1].toUpperCase(), 'pre', 'cat']; });
+  }
+  add(/^(IIB\+H2|IIIA|IIIB|IIIC|IIA|IIB|IIC)/i, function (m) { return [m[1].toUpperCase(), 'post', 'grp']; });
+  if (ph !== 'pre') {
+    add(/^II(?!I)/, function () { return ['II', 'post', 'grp']; });
+    add(/^I(?!I)/, function () { return ['I', 'post', 'grp']; });
+  }
+  add(/^T([1-6])(?!\d)/i, function (m) { return ['T' + m[1], 'post', 'temp']; });
+  add(/^T(\d{2,3})°C/i, function (m) { return ['T' + m[1] + '°C', 'post', 'temp']; });
+  add(/^T(\d{2,3})C/i, function (m) { return ['T' + m[1] + '°C', 'post', 'temp']; });
+  add(/^T(\d{2,3})/i, function (m) { return ['T' + m[1], 'post', 'temp']; });
+  if (ph === 'post') add(/^([GDM])([abc])/i, function (m) { return [m[1].toUpperCase() + m[2].toLowerCase(), 'post', 'epl']; });
+  else add(/^([GDM])([abc])/, function (m) { return [m[1] + m[2], 'post', 'epl']; });
+  if (ph === 'post') {
+    add(/^X/i, function () { return ['X', 'post', 'x']; });
+    add(/^U/i, function () { return ['U', 'post', 'u']; });
+  }
+  add(/^IP[0-6X][0-9X]/i, function (m) { return [m[0].toUpperCase(), ph, 'ip']; });
+  if (last === 'op') add(/^(is|pr|sh)/i, function (m) { return [m[1].toLowerCase(), 'prot', 'prot']; });
+  if (ph !== 'post') {
+    for (var k = 0; k < PROT_TOKS.length; k++) {
+      if (low.indexOf(PROT_TOKS[k]) === 0) c.push([PROT_TOKS[k].length, PROT_TOKS[k], 'prot', PROT_TOKS[k] === 'op' ? 'op' : 'prot']);
+    }
+  }
+  return c;
+}
+function segDfs(s, ph, last, depth) {
+  if (!s) return { out: [], ph: ph, last: last };
+  if (depth > 14) return null;
+  var cs = segCands(s, ph, last);
+  for (var i = 0; i < cs.length; i++) {
+    var r = segDfs(s.slice(cs[i][0]), cs[i][2], cs[i][3], depth + 1);
+    if (r) { r.out.unshift(cs[i][1]); return r; }
+  }
+  return null;
+}
+/* NEC / CEC: put spaces around the keywords of a compact string */
+function necSpace(s) {
+  s = s.replace(/(AEx|EEx)/g, ' $1 ').replace(/Ex(?=[a-z])/g, ' Ex ');
+  s = s.replace(/(classes|class(?!es)|divisions|division(?!s)|div(?!ision)|groups|group(?!s)|grp|zones|zone(?!s)|nema|type)(?=[A-Za-z0-9])/gi, ' $1 ');
+  s = s.replace(/(^|[\s,])([A-G]{1,7})(?=T(?:1|2[A-D]?|3[A-C]?|4A?|5|6)(?:\s|$|,))/g, '$1$2 ');
+  return s;
+}
+
 /* ------------------------------------------------------------------ */
 /* Ex marking parser (ATEX, IECEx, and the Ex part of NEC/CEC)         */
 /* ------------------------------------------------------------------ */
@@ -403,10 +531,10 @@ function parseMarking(raw, opts) {
     if (m) { info.ambient = { min: null, max: parseInt(m[1], 10) }; s = s.replace(m[0], ' '); }
   }
 
-  var tk = [];
+  var tk = [], sph = 'pre', slast = '';
   s.split(/\s+/).filter(Boolean).forEach(function (t) {
-    var g = /^(II|I)(M[12]|[123](?:G|D|GD|DG)?)$/i.exec(t);
-    if (g) { tk.push(g[1]); tk.push(g[2]); } else tk.push(t);
+    var r = t.indexOf('/') < 0 ? segDfs(t, sph, slast, 0) : null;
+    if (r) { r.out.forEach(function (x) { tk.push(x); }); sph = r.ph; slast = r.last; } else tk.push(t);
   });
 
   var state = 'pre', exSeen = false, last = '', pendingCat = null;
@@ -783,7 +911,7 @@ var NEMA = {
 };
 
 function parseNEC(raw) {
-  var s = String(raw || '').replace(/[;()]/g, ' ');
+  var s = necSpace(String(raw || '').replace(/[;()]/g, ' '));
   var tk = s.split(/[\s,&\/+]+/).filter(Boolean);
   var info = { classes: [], divs: [], groups: [], zones: [], temps: [], encl: [], ex: null };
   var parts = [], warnings = [], unknown = [], mode = '', rangeFrom = null;
@@ -1349,6 +1477,104 @@ function viewAbout() {
   return h;
 }
 
+/* Deep explanations for the result screen: why each part matters and what to check */
+var DEEP = {
+  grp_II: { why: L('Group II is the big family: factories, refineries, tank farms, paint shops, mills and any other place above ground. Group I is only for mines. A group II device must never go underground in a coal mine.', 'المجموعة II هي العائلة الكبيرة: المصانع والمصافي ومستودعات الخزانات وورش الدهان والمطاحن وأي مكان فوق الأرض. أما المجموعة I فهي للمناجم فقط. ولا يجوز إدخال جهاز من المجموعة II إلى منجم فحم.'), check: L('Check that the place really is above ground and not a mine. Then read the gas or dust group later in the marking.', 'تأكد أن المكان فوق الأرض وليس منجمًا. ثم اقرأ مجموعة الغاز أو الغبار لاحقًا في العلامة.') },
+  grp_I: { why: L('Mines have two special dangers: firedamp (methane) and coal dust. Group I equipment is built and tested for them, and it also has to survive rough handling underground.', 'في المناجم خطران خاصان: الغاز الحارق (الميثان) وغبار الفحم. ومعدات المجموعة I مصنوعة ومختبرة لهما، ويجب أن تتحمل أيضًا الاستعمال الشاق تحت الأرض.'), check: L('Check the category: M1 keeps working when gas is present, M2 must be switched off when gas appears.', 'تحقق من الفئة: M1 تبقى تعمل عند وجود الغاز، أما M2 فيجب فصلها عند ظهور الغاز.') },
+  cat_1: { why: L('Category 1 is the top level. It is made for the place where the explosive atmosphere is there all the time or for long periods, so it must stay safe even if one fault happens and even if two faults happen together.', 'الفئة 1 هي الأعلى. وهي مصنوعة للمكان الذي يوجد فيه الجو المتفجر باستمرار أو لفترات طويلة، فيجب أن تبقى آمنة حتى مع حدوث عطل واحد أو عطلين معًا.'), check: L('Use it for Zone 0 (gas) or Zone 20 (dust). It can also go in the zones with lower risk.', 'استخدمها في المنطقة 0 (غاز) أو المنطقة 20 (غبار). ويمكن أيضًا استخدامها في المناطق الأقل خطورة.') },
+  cat_2: { why: L('Category 2 is for places where the explosive atmosphere is likely to appear during normal work. It stays safe even when the usual faults of that equipment happen.', 'الفئة 2 للأماكن التي يُحتمل فيها ظهور الجو المتفجر أثناء العمل العادي. وتبقى آمنة حتى مع الأعطال المعتادة لتلك المعدة.'), check: L('Use it for Zone 1 or Zone 2 (gas), and Zone 21 or Zone 22 (dust).', 'استخدمها في المنطقة 1 أو 2 (غاز)، والمنطقة 21 أو 22 (غبار).') },
+  cat_3: { why: L('Category 3 is for places where an explosive atmosphere is not expected, and if it appears it stays only a short time. Safety is needed in normal operation only.', 'الفئة 3 للأماكن التي لا يُتوقع فيها جو متفجر، وإذا ظهر فإنه يبقى لفترة قصيرة. والأمان مطلوب في التشغيل العادي فقط.'), check: L('Use it for Zone 2 (gas) or Zone 22 (dust) only. Never put it in Zone 0, 1, 20 or 21.', 'استخدمها في المنطقة 2 (غاز) أو المنطقة 22 (غبار) فقط. ولا تضعها أبدًا في المناطق 0 أو 1 أو 20 أو 21.') },
+  cat_M1: { why: L('M1 equipment must stay running and safe even in firedamp, so it is used for things that cannot be switched off, such as gas detectors and emergency communication.', 'معدات M1 يجب أن تبقى تعمل وآمنة حتى في وجود الغاز الحارق، لذلك تُستخدم لما لا يمكن فصله مثل كواشف الغاز والاتصالات الطارئة.'), check: L('Check that it is used where shutdown is not allowed.', 'تأكد أنها تُستخدم حيث لا يُسمح بالفصل.') },
+  cat_M2: { why: L('M2 equipment is switched off when firedamp appears. It is the normal choice for machines and lights in a mine.', 'معدات M2 تُفصل عند ظهور الغاز الحارق. وهي الخيار المعتاد للآلات والإنارة في المناجم.'), check: L('Check that a gas detector will cut the power in time.', 'تأكد أن كاشف الغاز سيقطع الكهرباء في الوقت المناسب.') },
+  ex: { why: L('Ex is the sign that a recognised test house has checked the equipment against the explosion-protection standards. Without it the equipment is ordinary equipment, however strong it looks.', 'علامة Ex تدل على أن جهة اختبار معترفًا بها فحصت المعدة وفق معايير الحماية من الانفجار. وبدونها تكون المعدة عادية مهما بدت متينة.'), check: L('The Ex block must be on the nameplate itself and stay readable. A missing or painted-over nameplate means you cannot use the equipment.', 'يجب أن تكون كتلة Ex على لوحة البيانات نفسها وأن تبقى مقروءة. فقدان اللوحة أو طلاؤها يعني أنه لا يمكن استخدام المعدة.') },
+  p_d: { why: L('Flameproof: if gas gets inside and explodes, the strong enclosure holds. The hot gas that escapes is cooled while it passes through very narrow gaps, so it cannot light the gas outside.', 'مانع للهب: إذا دخل الغاز وانفجر داخل الغلاف فإن الغلاف القوي يتحمل. أما الغاز الساخن الذي يخرج فيبرد أثناء مروره في فجوات ضيقة جدًا فلا يشعل الغاز الخارجي.'), check: L('Never open it while it is powered. Do not scratch, paint or grease the machined joint faces. Make sure every bolt is there and is the right grade. Use only certified cable glands and stopping plugs. Do not drill extra holes.', 'لا تفتحه وهو تحت الكهرباء. لا تخدش أسطح الوصلات المشغّلة ولا تدهنها. تأكد من وجود كل المسامير ومن أنها بالدرجة الصحيحة. استخدم وصلات كابلات وسدادات معتمدة فقط. ولا تثقب ثقوبًا إضافية.') },
+  p_e: { why: L('Increased safety: the equipment has no sparks and no hot spots in normal work, and it adds extra safety on top of the normal design (better insulation, larger distances, secure terminals).', 'السلامة المعززة: لا توجد في المعدة شرارات ولا نقاط ساخنة أثناء العمل العادي، وتضيف أمانًا فوق التصميم المعتاد (عزل أفضل ومسافات أكبر وأطراف مثبتة).'), check: L('Tighten the terminals as the maker says. Never exceed the rated voltage and current. Keep the enclosure closed and its seal in good shape. Use the right cable gland.', 'اربط الأطراف كما يحدد المصنّع. لا تتجاوز الجهد والتيار المقنّنين. أبقِ الغلاف مغلقًا وحشوته سليمة. واستخدم وصلة الكابل الصحيحة.') },
+  p_i: { why: L('Intrinsically safe: the energy in the circuit is kept so small that a spark or a hot wire cannot light the gas. It is the only type that allows live work in the hazardous area.', 'الأمان الذاتي: الطاقة في الدائرة صغيرة جدًا فلا تستطيع الشرارة أو السلك الساخن إشعال الغاز. وهو النوع الوحيد الذي يسمح بالعمل على دائرة حية في المنطقة الخطرة.'), check: L('Always check the whole loop, not one device. The voltage, current and power that the barrier can give must be lower than what the device accepts. The capacitance and inductance of the device plus the cable must be lower than what the barrier allows. Keep the barrier earth good.', 'افحص الدائرة كلها لا جهازًا واحدًا. يجب أن يكون الجهد والتيار والقدرة التي يعطيها الحاجز أقل مما يقبله الجهاز. ويجب أن تكون السعة والحث للجهاز مع الكابل أقل مما يسمح به الحاجز. وحافظ على تأريض الحاجز جيدًا.') },
+  p_m: { why: L('Encapsulation: the parts that could spark are sealed in a solid compound, so the gas never touches them.', 'التغليف: الأجزاء التي قد تشرر مغلّفة بمادة صلبة فلا يلمسها الغاز.'), check: L('Look for cracks or damage in the compound. It cannot be repaired in the field. A damaged unit must be replaced.', 'ابحث عن شروخ أو تلف في المادة. ولا يمكن إصلاحها في الموقع. والوحدة التالفة تُستبدل.') },
+  p_o: { why: L('Oil immersion: the parts that could spark sit under oil, which keeps the gas away from them.', 'الغمر في الزيت: الأجزاء التي قد تشرر تقع تحت الزيت الذي يبعد الغاز عنها.'), check: L('Keep the oil at the marked level and check its condition. Keep the unit upright.', 'أبقِ الزيت عند المستوى المحدد وافحص حالته. وأبقِ الوحدة قائمة.') },
+  p_p: { why: L('Pressurised: clean air or inert gas is kept inside the enclosure at a higher pressure than outside, so the explosive gas cannot enter.', 'التضغيط: يُحفظ داخل الغلاف هواء نظيف أو غاز خامل بضغط أعلى من الخارج فلا يدخل الغاز المتفجر.'), check: L('Purge the enclosure for the set time before you switch on. Test the alarm for loss of pressure. Know what the system does when the pressure is lost.', 'نظّف الغلاف بالتهوية للمدة المحددة قبل التشغيل. اختبر إنذار فقدان الضغط. واعرف ما يفعله النظام عند فقدان الضغط.') },
+  p_q: { why: L('Powder filling: the parts sit in fine sand or quartz that stops flames and sparks.', 'التعبئة بالمسحوق: الأجزاء تقع في رمل ناعم أو كوارتز يوقف اللهب والشرر.'), check: L('Check that the enclosure is not cracked and the filling has not settled.', 'تأكد أن الغلاف غير مشقوق وأن المسحوق لم يهبط.') },
+  p_n: { why: L('Type n (nA, nC, nR) and its newer form ec are for Zone 2 only. The equipment does not make sparks or hot spots in normal work, but it does not have to survive faults like Zone 1 equipment does.', 'النوع n (nA وnC وnR) وصيغته الأحدث ec للمنطقة 2 فقط. فالمعدة لا تصدر شرارات ولا نقاطًا ساخنة في العمل العادي، لكنها لا تلزم بتحمل الأعطال كما تفعل معدات المنطقة 1.'), check: L('Do not use it in Zone 1 or Zone 0. The letter after n tells the method: A no sparks, C sparking parts protected, R restricted breathing.', 'لا تستخدمها في المنطقة 1 أو 0. والحرف بعد n يبيّن الطريقة: A بلا شرر، C أجزاء مشرّرة محمية، R تنفس محدود.') },
+  p_t: { why: L('Protection by enclosure for dust: the enclosure keeps dust out and keeps the surface cool, so a dust cloud or a dust layer cannot ignite.', 'الحماية بالغلاف للغبار: الغلاف يمنع دخول الغبار ويُبقي السطح باردًا فلا تشتعل سحابة الغبار أو طبقته.'), check: L('Clean the dust layers regularly. A thick layer on the housing acts like a blanket and makes it hotter. Keep the gaskets and cable entries tight.', 'نظّف طبقات الغبار بانتظام. فالطبقة السميكة على الغلاف تعمل كغطاء وترفع حرارته. وأبقِ الحشوات ومداخل الكابلات محكمة.') },
+  p_op: { why: L('Optical radiation: light from lamps, lasers or fibres is limited so it cannot heat a surface or a dust particle enough to ignite it.', 'الإشعاع البصري: الضوء الصادر من المصابيح أو الليزر أو الألياف محدود فلا يستطيع تسخين سطح أو جسيم غبار بما يكفي لإشعاله.'), check: L('The letters after op tell the method: is intrinsically safe, pr protected, sh interlocked. Check that the power of the source is within the certified value.', 'الحروف بعد op تبيّن الطريقة: is أمان ذاتي، pr محمي، sh متشابك. تأكد أن قدرة المصدر ضمن القيمة المعتمدة.') },
+  p_s: { why: L('Special protection: a method not covered by the usual list. The certificate explains it, so the nameplate alone is not enough.', 'حماية خاصة: طريقة لا تغطيها القائمة المعتادة. وتشرحها الشهادة، فلا تكفي لوحة البيانات وحدها.'), check: L('Read the certificate and follow every condition in it.', 'اقرأ الشهادة والتزم بكل شرط فيها.') },
+  p_h: { why: L('Non-electrical equipment (pumps, gearboxes, brakes) is protected against hot surfaces and sparks from moving parts, friction and static.', 'المعدات غير الكهربائية (المضخات وصناديق التروس والفرامل) محمية من الأسطح الساخنة والشرر الناتج عن الأجزاء المتحركة والاحتكاك والكهرباء الساكنة.'), check: L('Check lubrication and alignment. A dry or worn bearing can become hot.', 'افحص التزييت والمحاذاة. فالمحمل الجاف أو البالي قد يسخن.') },
+  gas_IIA: { why: L('IIA gases are the easiest to ignite safely: a larger spark energy is needed. Typical examples are propane, acetone and many solvents.', 'غازات IIA هي الأسهل من حيث الأمان: فهي تحتاج إلى طاقة شرارة أكبر. ومن أمثلتها البروبان والأسيتون وكثير من المذيبات.'), check: L('IIA equipment may only be used with IIA gases. Never with IIB or IIC.', 'معدات IIA تُستخدم مع غازات IIA فقط، ولا تُستخدم مع IIB أو IIC.') },
+  gas_IIB: { why: L('IIB gases ignite more easily than IIA. Typical examples are ethylene and town gas.', 'غازات IIB تشتعل أسهل من IIA. ومن أمثلتها الإيثيلين وغاز المدينة.'), check: L('IIB equipment also suits IIA gases, but not IIC.', 'معدات IIB تناسب غازات IIA أيضًا، لكنها لا تناسب IIC.') },
+  'gas_IIB+H2': { why: L('This is IIB with extra tests for hydrogen. It is a middle step between IIB and IIC.', 'هذه IIB مع اختبارات إضافية للهيدروجين. وهي خطوة وسط بين IIB وIIC.'), check: L('Good for IIB gases and hydrogen. Acetylene still needs IIC.', 'مناسبة لغازات IIB وللهيدروجين. أما الأسيتيلين فيحتاج IIC.') },
+  gas_IIC: { why: L('IIC is the strictest gas group. Hydrogen and acetylene ignite with a very small spark.', 'IIC هي أشد مجموعات الغاز صرامة. فالهيدروجين والأسيتيلين يشتعلان بشرارة صغيرة جدًا.'), check: L('IIC equipment is accepted for every gas group. Use IIC for hydrogen plants, battery rooms and acetylene.', 'معدات IIC مقبولة لكل مجموعات الغاز. استخدم IIC لمحطات الهيدروجين وغرف البطاريات والأسيتيلين.') },
+  dust_IIIA: { why: L('IIIA is for combustible flyings, such as cotton fluff, wood chips and fibres.', 'IIIA للألياف القابلة للاشتعال المتطايرة، مثل زغب القطن ونشارة الخشب والألياف.'), check: L('Check the dust of your plant against the group.', 'قارن غبار منشأتك بالمجموعة.') },
+  dust_IIIB: { why: L('IIIB is for non-conductive dust, such as flour, sugar, grain and wood dust.', 'IIIB للغبار غير الموصل، مثل الدقيق والسكر والحبوب وغبار الخشب.'), check: L('IIIB equipment also suits IIIA.', 'معدات IIIB تناسب IIIA أيضًا.') },
+  dust_IIIC: { why: L('IIIC is for conductive dust, such as metal powders and carbon. Conductive dust inside a device can short circuit it, so the sealing must be very good.', 'IIIC للغبار الموصل، مثل مساحيق المعادن والكربون. والغبار الموصل داخل الجهاز قد يسبب قصرًا كهربائيًا، لذلك يجب أن يكون الإحكام ممتازًا.'), check: L('IIIC equipment suits every dust group.', 'معدات IIIC تناسب كل مجموعات الغبار.') },
+  temp: { why: L('The hottest outside surface of the device, in the worst case, stays under this limit. If the gas lights at a lower temperature than the limit, a hot surface alone can start the fire, without any spark.', 'أسخن سطح خارجي للجهاز، في أسوأ حالة، يبقى تحت هذا الحد. وإذا كان الغاز يشتعل عند حرارة أقل من الحد فقد يبدأ الحريق بسطح ساخن وحده دون أي شرارة.'), check: L('Compare the class with the ignition temperature of the gas in your plant. The surface limit must be lower. A T6 device suits all gases that T1 to T5 devices suit. Carbon disulfide (about 90°C) is the usual example that needs T6.', 'قارن الفئة بحرارة اشتعال الغاز في منشأتك. يجب أن يكون حد السطح أقل. والجهاز T6 يناسب كل الغازات التي تناسبها أجهزة T1 إلى T5. وثاني كبريتيد الكربون (نحو 90°م) هو المثال المعتاد الذي يحتاج T6.') },
+  temp_dust: { why: L('For dust the limit works on two sides. The surface must stay well under the ignition temperature of a dust cloud (a common rule is two thirds of it, in °C), and also well under the ignition temperature of a dust layer lying on the device (with a safety margin of 75 K for layers up to 5 mm).', 'بالنسبة للغبار فالحد يعمل من جانبين. يجب أن يبقى السطح أقل بكثير من حرارة اشتعال سحابة الغبار (قاعدة شائعة: ثلثاها بالدرجة المئوية)، وأقل بكثير من حرارة اشتعال طبقة الغبار المستقرة على الجهاز (بهامش أمان 75 درجة كلفن للطبقات حتى 5 مم).'), check: L('Get the ignition data of your dust and calculate both limits. Keep the layers thin by cleaning.', 'احصل على بيانات اشتعال غبارك واحسب الحدين. وأبقِ الطبقات رقيقة بالتنظيف.') },
+  epl_G: { why: L('EPL is the same message as the category, but written for any standard. Ga is the highest for gas, Gb is high, Gc is enhanced. The letter G means gas.', 'EPL هي رسالة الفئة نفسها لكنها مكتوبة لأي معيار. Ga أعلى مستوى للغاز، وGb مستوى عالٍ، وGc معزز. والحرف G يعني الغاز.'), check: L('Match it to the zone: Ga for Zone 0, Gb for Zone 1, Gc for Zone 2. A higher level may be used in a lower-risk zone, never the opposite.', 'طابقه مع المنطقة: Ga للمنطقة 0، وGb للمنطقة 1، وGc للمنطقة 2. ويجوز استخدام مستوى أعلى في منطقة أقل خطورة، وليس العكس.') },
+  epl_D: { why: L('The same idea for dust. Da is the highest, Db is high, Dc is enhanced.', 'الفكرة نفسها للغبار. Da أعلى مستوى، وDb عالٍ، وDc معزز.'), check: L('Match it to the zone: Da for Zone 20, Db for Zone 21, Dc for Zone 22.', 'طابقه مع المنطقة: Da للمنطقة 20، وDb للمنطقة 21، وDc للمنطقة 22.') },
+  epl_M: { why: L('The same idea for mines. Ma keeps working in firedamp, Mb is switched off when gas appears.', 'الفكرة نفسها للمناجم. Ma تبقى تعمل في الغاز الحارق، وMb تُفصل عند ظهور الغاز.'), check: L('Check that the cut-off system for Mb works.', 'تأكد أن نظام الفصل للمستوى Mb يعمل.') },
+  x: { why: L('The letter X is a warning flag. The certificate has conditions that are not on the nameplate, for example a limit on the ambient temperature, a special cable, or a rule against some cleaning methods.', 'الحرف X علم تحذير. فالشهادة فيها شروط ليست على اللوحة، مثل حد لحرارة المحيط أو كابل خاص أو منع بعض طرق التنظيف.'), check: L('Do not install before you have read the "special conditions" section of the certificate and have followed all of them.', 'لا تركّب قبل أن تقرأ قسم "الشروط الخاصة" في الشهادة وتلتزم بها كلها.') },
+  u: { why: L('U means a component, such as a terminal or an empty enclosure. It was not tested as a complete product.', 'U تعني مكوّنًا، مثل طرف توصيل أو غلاف فارغ. ولم يُختبر كمنتج كامل.'), check: L('The finished product made from it needs its own certificate. A component alone cannot be installed in the hazardous area.', 'المنتج النهائي المصنوع منه يحتاج شهادته الخاصة. ولا يمكن تركيب المكوّن وحده في المنطقة الخطرة.') },
+  ce: { why: L('CE is the maker\'s declaration. For Ex equipment it means the ATEX rules were followed, including a check of the quality system.', 'CE إعلان من المصنّع. وبالنسبة لمعدات Ex تعني أن قواعد ATEX قد اتُّبعت، ومنها مراجعة نظام الجودة.'), check: L('For Ex equipment the four digits after it identify the body that audits the factory.', 'في معدات Ex تحدد الأرقام الأربعة بعدها الجهة التي تدقق المصنع.') },
+  nb: { why: L('This number identifies the notified body (an approved organisation) that audits the quality system of the factory.', 'هذا الرقم يحدد الجهة المبلّغ عنها (منظمة معتمدة) التي تدقق نظام الجودة في المصنع.'), check: L('You can search it in the public list of notified bodies.', 'يمكنك البحث عنه في القائمة العامة للجهات المبلّغ عنها.') },
+  assoc: { why: L('Associated apparatus is the partner on the safe side. It limits the energy that goes out to the intrinsically safe circuit. It is not itself made for the hazardous area, unless it also has a second protection type.', 'المعدات المرتبطة هي الشريك في الجانب الآمن. فهي تحدد الطاقة الخارجة إلى دائرة الأمان الذاتي. وهي نفسها ليست مصنوعة للمنطقة الخطرة، إلا إذا كان لها نوع حماية ثانٍ.'), check: L('Install it outside the hazardous area (or in a suitable enclosure) and keep its earth connection.', 'ركّبها خارج المنطقة الخطرة (أو داخل غلاف مناسب) وحافظ على توصيل التأريض.') },
+  amb: { why: L('The tests were made inside this ambient range. Outside it the protection is not proven: the enclosure may leak, seals may harden, and surface temperatures may be higher.', 'أُجريت الاختبارات ضمن مدى المحيط هذا. وخارجه لا تثبت الحماية: فقد يتسرب الغلاف وتتصلب الحشوات وترتفع حرارة السطح.'), check: L('Compare the range with the real weather and with heat from nearby sources. When there is no range on the nameplate, the usual range is -20°C to +40°C.', 'قارن المدى بالطقس الفعلي وبالحرارة الصادرة من المصادر القريبة. وعند عدم وجود مدى على اللوحة فالمدى المعتاد هو -20°م إلى +40°م.') },
+  class_I: { why: L('Class I covers flammable gases and vapors, such as petrol, natural gas and solvents.', 'الصنف I يغطي الغازات والأبخرة القابلة للاشتعال، مثل البنزين والغاز الطبيعي والمذيبات.'), check: L('Use it for gas plants. Then check the Group (A to D) and the temperature code.', 'استخدمه لمحطات الغاز. ثم تحقق من المجموعة (A إلى D) ورمز الحرارة.') },
+  class_II: { why: L('Class II covers combustible dust, such as flour, coal, metal powder and grain.', 'الصنف II يغطي الغبار القابل للاشتعال، مثل الدقيق والفحم ومساحيق المعادن والحبوب.'), check: L('Check the Group (E to G) and the temperature code. Keep dust layers thin.', 'تحقق من المجموعة (E إلى G) ورمز الحرارة. وأبقِ طبقات الغبار رقيقة.') },
+  class_III: { why: L('Class III covers fibres and flyings, such as textile fibres and wood chips, which are easy to ignite but do not float in the air in large amounts.', 'الصنف III يغطي الألياف والمواد المتطايرة، مثل ألياف النسيج ونشارة الخشب، وهي سهلة الاشتعال لكنها لا تطفو في الهواء بكميات كبيرة.'), check: L('Class III has no groups. Keep the area clean.', 'الصنف III ليس له مجموعات. وأبقِ المكان نظيفًا.') },
+  div_1: { why: L('Division 1: the hazard exists in normal work, or often because of repair or leaks. It is the strictest case.', 'القسم 1: الخطر موجود في العمل العادي، أو كثيرًا بسبب الصيانة أو التسريب. وهي الحالة الأشد صرامة.'), check: L('Use only equipment approved for Division 1. Division 2 equipment is not enough.', 'استخدم معدات معتمدة للقسم 1 فقط. ومعدات القسم 2 لا تكفي.') },
+  div_2: { why: L('Division 2: the hazard appears only when something goes wrong, such as a leak or a failed container.', 'القسم 2: يظهر الخطر فقط عند حدوث خلل، مثل تسريب أو عطب في الوعاء.'), check: L('Division 1 equipment may also be used here.', 'يجوز استخدام معدات القسم 1 هنا أيضًا.') },
+  zone: { why: L('The zone says how often the explosive atmosphere appears. Lower numbers mean more danger: 0 and 20 are present most of the time, 1 and 21 sometimes in normal work, 2 and 22 rarely and for a short time.', 'تبيّن المنطقة عدد مرات ظهور الجو المتفجر. والأرقام الأقل تعني خطرًا أكبر: 0 و20 موجودة معظم الوقت، و1 و21 أحيانًا في العمل العادي، و2 و22 نادرًا ولمدة قصيرة.'), check: L('The zone is decided by the plant owner in the hazardous area classification, not by the device. Check the equipment level against it.', 'يحدد صاحب المنشأة المنطقة في تصنيف المناطق الخطرة، لا الجهاز. قارن مستوى المعدة بها.') },
+  group: { why: L('The group is the family of gases or dusts that the equipment is approved for.', 'المجموعة هي عائلة الغازات أو الأغبرة التي اعتُمدت المعدة لها.'), check: L('Make sure your gas or dust is in the list. A: acetylene. B: hydrogen. C: ethylene. D: propane and petrol. E, F, G: metal, carbon and grain dusts.', 'تأكد أن الغاز أو الغبار عندك ضمن القائمة. A: الأسيتيلين. B: الهيدروجين. C: الإيثيلين. D: البروبان والبنزين. E وF وG: غبار المعادن والكربون والحبوب.') },
+  nema: { why: L('The NEMA type describes the enclosure in North America: for example 4X for outdoor and corrosion, 7 for explosion-proof gas places, 9 for dust places.', 'يصف نوع NEMA الغلاف في أمريكا الشمالية: مثلًا 4X للخارج والتآكل، و7 لأماكن الغاز المحمية من الانفجار، و9 لأماكن الغبار.'), check: L('It does not replace the hazardous-area approval. Check both.', 'وهو لا يحل محل اعتماد المناطق الخطرة. تحقق من الاثنين.') }
+};
+
+function deepFor(p) {
+  var k = p.kind, c = String(p.code || '');
+  if (k === 'grp') return DEEP['grp_' + c];
+  if (k === 'cat') return DEEP['cat_' + String(p.arg || c.charAt(0)).toUpperCase()];
+  if (k === 'prot') { var b = c.toLowerCase().indexOf('op') === 0 ? 'op' : c.charAt(0).toLowerCase(); return DEEP['p_' + b]; }
+  if (k === 'gas') return DEEP['gas_' + c];
+  if (k === 'dust') return DEEP['dust_' + c];
+  if (k === 'temp') return /°C/.test(c) ? DEEP.temp_dust : DEEP.temp;
+  if (k === 'epl') return DEEP['epl_' + c.charAt(0)];
+  if (k === 'class') return DEEP['class_' + c.replace('Class ', '')];
+  if (k === 'div') return DEEP['div_' + c.replace('Div ', '')];
+  if (k === 'group') return DEEP.group;
+  return DEEP[k] || null;
+}
+
+/* "Where it fits": a combined reading of the marking */
+function fitHtml(r, sys) {
+  var parts = r.parts, h = '';
+  var has = function (k) { return parts.filter(function (p) { return p.kind === k; }); };
+  var out = [];
+  var z = r.zones || [];
+  if (z.length) {
+    var zl = z.map(function (n) { return '<li><b>' + T(L('Zone ', 'المنطقة ')) + n + '.</b> ' + T(ExEngine.ZONE[n]) + '</li>'; }).join('');
+    out.push('<h4>' + T(L('Where you may install it', 'أين يمكنك تركيبها')) + '</h4><ul class="plain">' + zl + '</ul>');
+  }
+  var gases = has('gas').concat(has('dust')), ex = [];
+  gases.forEach(function (p) { var d = DEEP[(p.kind === 'gas' ? 'gas_' : 'dust_') + p.code]; if (d) ex.push('<li><b>' + esc(p.code) + '.</b> ' + T(d.why) + '</li>'); });
+  if (ex.length) out.push('<h4>' + T(L('What it can be used with', 'ماذا يمكن استخدامها معه')) + '</h4><ul class="plain">' + ex.join('') + '</ul>');
+  var tp = has('temp')[0];
+  if (tp) out.push('<h4>' + T(L('The temperature rule', 'قاعدة الحرارة')) + '</h4><p>' + T(deepFor(tp).why) + '</p><p>' + T(deepFor(tp).check) + '</p>');
+  var steps = [], seen = {};
+  parts.forEach(function (p) {
+    if (p.kind === 'prot' || p.kind === 'x' || p.kind === 'u' || p.kind === 'assoc' || p.kind === 'amb') {
+      var d = deepFor(p); if (d && d.check && !seen[p.kind + p.code]) { seen[p.kind + p.code] = 1; steps.push('<li><b>' + esc(p.code) + '.</b> ' + T(d.check) + '</li>'); }
+    }
+  });
+  if (steps.length) out.push('<h4>' + T(L('Before and after installation', 'قبل التركيب وبعده')) + '</h4><ul class="plain">' + steps.join('') + '</ul>');
+  out.push('<h4>' + T(L('Always remember', 'تذكّر دائمًا')) + '</h4><ul class="plain"><li>' + T(L('The zone is chosen by the plant owner. The device only has to match it.', 'المنطقة يحددها صاحب المنشأة. وعلى الجهاز فقط أن يطابقها.')) + '</li><li>' + T(L('Any change to the device (new gland, drilled hole, paint on the joint, different part) cancels the certificate.', 'أي تعديل على الجهاز (وصلة جديدة أو ثقب أو طلاء على الوصلة أو قطعة مختلفة) يلغي الشهادة.')) + '</li><li>' + T(L('Inspect it on a schedule. Damage, corrosion and missing bolts are the usual reasons for failure.', 'افحصه دوريًا. فالتلف والتآكل وفقد المسامير هي الأسباب المعتادة للأعطال.')) + '</li></ul>');
+  return '<section class="card fit"><h3>' + T(L('Where it fits and what to do', 'أين تناسب وماذا تفعل')) + '</h3>' + out.join('') + '</section>';
+}
+
+/* The marking read out loud, in order */
+function readHtml(r) {
+  if (!r.parts.length) return '';
+  var items = r.parts.map(function (p) { return '<li><span class="chip">' + esc(p.code) + '</span> ' + T(p.title) + '</li>'; }).join('');
+  return '<section class="card"><h3>' + T(L('Reading it left to right', 'قراءتها من اليسار إلى اليمين')) + '</h3><ol class="read">' + items + '</ol></section>';
+}
+
 /* App: state, rendering, events */
 var S = C.S;
 var ADMOB_TESTING = false;
@@ -1380,19 +1606,18 @@ function viewHome() {
     return '<button type="button" data-act="sys" data-k="' + k + '" class="' + (state.sys === k ? 'on' : '') + '" aria-pressed="' + (state.sys === k) + '">' + flag + '<span class="nm ltr">' + nm + '</span><span class="sb">' + T(sub) + '</span></button>';
   };
   var ph = { ATEX: ['II 2G Ex db IIC T6 Gb', 'IP66', 'ABC14ATEX0123X'], IECEx: ['Ex db eb IIC T4 Gb', 'IP66', 'IECEx ABC 24.1234X'], NEC: ['Class I, Division 1, Groups C&D', 'IP67', '1234567'] }[state.sys];
-  var field = function (id, icon, label, val, p, err) {
-    return '<div class="field"><span class="fi">' + icon + '</span><span class="sep"></span><div><label for="' + id + '">' + T(label) + '</label><input id="' + id + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(val) + '" placeholder="e.g. ' + esc(p) + '"></div>' + (err ? '<div class="err" id="err" role="alert">' + T(err) + '</div>' : '') + '</div>';
+  var field = function (id, icon, label, val, p, err, cls) {
+    return '<div class="field' + (cls ? ' ' + cls : '') + '"><span class="fi">' + icon + '</span><span class="sep"></span><div><label for="' + id + '">' + T(label) + '</label><input id="' + id + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(val) + '" placeholder="e.g. ' + esc(p) + '"></div>' + (err ? '<div class="err" id="err" role="alert">' + T(err) + '</div>' : '') + '</div>';
   };
   var ex = EX[state.sys].list.map(function (x, i) { return '<button type="button" data-act="ex" data-i="' + i + '">' + esc(x) + '</button>'; }).join('');
-  return '<header class="hero">' + C.SKYLINE + '<div class="inner"><div class="bar" style="justify-content:flex-end">' + langBar() + '</div>' +
+  return '<div class="home"><header class="hero">' + C.SKYLINE + '<div class="inner"><div class="bar" style="justify-content:flex-end">' + langBar() + '</div>' +
     '<h1 class="brand ltr"><span class="t1">Ex Nameplate</span><span class="t2">Analyzer</span></h1>' +
     '<p class="tag">' + tg[0] + '<i></i>' + tg[1] + '<i></i>' + tg[2] + '</p></div></header>' +
     '<div class="frame"><div class="panel"><i class="screw s1"></i><i class="screw s2"></i><i class="screw s3"></i><i class="screw s4"></i>' +
     '<span class="plate">' + T(S.selectSystem) + '</span>' +
     '<div class="sys">' + sysBtn('ATEX', C.FLAG_EU, 'ATEX', S.subATEX) + sysBtn('IECEx', C.FLAG_WORLD, 'IECEx', S.subIECEx) + sysBtn('NEC', C.FLAG_NA, 'NEC / CEC', S.subNEC) + '</div>' +
     field('f-m', IC.ui.doc, S.fMarking, state.m, ph[0], state.err ? S.errEmpty : null) +
-    field('f-ip', IC.ui.shield, S.fIP, state.ip, ph[1]) +
-    field('f-c', IC.ui.cert, S.fCert, state.c, ph[2]) +
+    '<div class="two">' + field('f-ip', IC.ui.shield, S.fIP, state.ip, ph[1], null, 'sm') + field('f-c', IC.ui.cert, S.fCert, state.c, ph[2], null, 'sm') + '</div>' +
     '<button type="button" class="go" data-act="explain"><span style="display:flex;align-items:center;gap:12px;margin-inline:auto">' + IC.ui.search + '<span>' + T(S.explain) + '</span></span><span class="chev">' + IC.ui.chev + '</span></button>' +
     '<div class="eg"><b>' + T(S.tryEx) + '</b><div class="row">' + ex + '<button type="button" class="clr" data-act="clear">' + T(S.clear) + '</button></div></div>' +
     '</div></div>' +
@@ -1400,12 +1625,14 @@ function viewHome() {
     '<button type="button" data-act="go" data-v="areas">' + IC.ui.hazard + '<span>' + T(S.nAreas) + '</span></button>' +
     '<button type="button" data-act="go" data-v="types">' + IC.ui.shield + '<span>' + T(S.nTypes) + '</span></button>' +
     '<button type="button" data-act="go" data-v="ip">' + IC.ui.calc + '<span>' + T(S.nIP) + '</span></button></nav>' +
-    '<p class="foot">' + T(S.foot) + '</p><button type="button" class="linkish" data-act="go" data-v="about">' + T(S.about) + '</button>';
+    '<p class="foot">' + T(S.foot) + '</p><button type="button" class="linkish" data-act="go" data-v="about">' + T(S.about) + '</button></div>';
 }
 
 function partCard(p) {
   var more = p.more && T(p.more) ? '<details><summary>' + T(S.more) + '</summary><p>' + T(p.more) + '</p></details>' : '';
-  return '<section class="part"><div class="ico">' + IC.icon(p.icon, p.arg) + '</div><div><div class="ph"><span class="chip">' + esc(p.code) + '</span><b>' + T(p.title) + '</b></div><p>' + T(p.text) + '</p>' + more + '</div></section>';
+  var dp = deepFor(p), deep = '';
+  if (dp) deep = '<div class="deep"><p><b>' + T(L('Why it matters', 'لماذا يهم')) + '</b> ' + T(dp.why) + '</p><p><b>' + T(L('What to check', 'ماذا تفحص')) + '</b> ' + T(dp.check) + '</p></div>';
+  return '<section class="part"><div class="ico">' + IC.icon(p.icon, p.arg) + '</div><div><div class="ph"><span class="chip">' + esc(p.code) + '</span><b>' + T(p.title) + '</b></div><p>' + T(p.text) + '</p>' + deep + more + '</div></section>';
 }
 
 function viewResult() {
@@ -1419,12 +1646,14 @@ function viewResult() {
     h += '<div class="sum"><ul>' + r.summary.map(function (x) { return '<li>' + T(x) + '</li>'; }).join('') + '</ul></div>';
   }
   if (r.zones.length) h += '<div class="zones"><span>' + T(S.zonesLbl) + '</span>' + r.zones.map(function (z) { return '<span class="z z' + z + '">' + z + '</span>'; }).join('') + '</div>';
+  if (r.parts.length) h += readHtml(r);
   if (r.warnings.length || r.unknown.length) {
     h += '<h2 class="h2">' + T(S.checksH) + '</h2>';
     r.warnings.forEach(function (w) { h += '<div class="warn">' + IC.ui.warn + '<div>' + T(w) + '</div></div>'; });
     if (r.unknown.length) h += '<div class="warn">' + IC.ui.info + '<div>' + T(S.unkTok) + ' <span class="ltr mono">' + esc(r.unknown.join(' ')) + '</span></div></div>';
   }
   if (r.parts.length) { h += '<h2 class="h2">' + T(S.partsH) + '</h2>'; r.parts.forEach(function (p) { h += partCard(p); }); }
+  if (r.parts.length) h += fitHtml(r, R.sys);
   if (r.ip) { h += '<h2 class="h2">' + T(S.ipH) + '</h2>' + ipItemsHtml(r.ip); }
   if (r.cert) {
     h += '<h2 class="h2">' + T(S.certH) + '</h2>';
