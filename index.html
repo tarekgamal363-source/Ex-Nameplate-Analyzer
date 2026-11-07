@@ -342,6 +342,30 @@ html[dir="rtl"] .upl { font-family: var(--font-ar); font-size: 16px; }
 .scanit b { color: var(--yellow); font-weight: 600; }
 .scanit p.mut { margin-top: 4px; font-size: 13.5px; }
 
+.hint { display: block; width: 100%; text-align: start; background: none; border: 0; padding: 2px 2px 0; margin: 0; color: #44506B; font-size: 12.5px; line-height: 1.25; min-height: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.hint code { font-family: var(--font-m); font-size: 12.5px; color: #0B1B3F; font-weight: 600; }
+.home .hint { font-size: 12px; } .home .hint code { font-size: 12px; }
+.home .two .hint { display: none; }
+.home .brand .t1 { font-size: clamp(20px, 3.5vh, 46px); }
+.home .brand .t2 { font-size: clamp(28px, 5.3vh, 72px); }
+.home .nav button { min-height: 54px; }
+.home .sys button { min-height: 52px; }
+
+/* ---- photo + typing ---- */
+.ptools { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ptools button { min-height: 38px; min-width: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: #fff; font-size: 22px; font-weight: 700; }
+.ptools .rot { font-size: 15px; padding: 0 14px; margin-inline-start: auto; }
+.ptools span { min-width: 46px; text-align: center; color: #C9D3EA; font-size: 14px; }
+.pview { height: 40vh; min-height: 220px; overflow: auto; border-radius: 14px; border: 1px solid var(--line); background: #000; -webkit-overflow-scrolling: touch; }
+.pview img { display: block; max-width: none; height: auto; }
+.psys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+.psys button { min-height: 42px; border-radius: 12px; border: 2px solid #2C4A86; background: var(--navy); color: #fff; font-family: var(--font-d); font-weight: 700; font-size: 17px; }
+.psys button.on { border-color: var(--yellow); background: #1B2E63; color: var(--yellow); }
+.pfield label { display: block; font-size: 15px; color: #E6ECFA; margin-bottom: 3px; }
+.pfield input { width: 100%; height: 46px; border-radius: 12px; border: 2px solid #3E72C8; background: #fff; color: #0B1B3F; padding: 0 12px; font-family: var(--font-m); font-size: 16px; }
+.pfield .hint { color: #AEBBD6; } .pfield .hint code { color: #fff; }
+.two2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+
 </style>
 </head>
 <body>
@@ -1629,281 +1653,62 @@ function readHtml(r) {
   return '<section class="card"><h3>' + T(L('Reading it left to right', 'قراءتها من اليسار إلى اليمين')) + '</h3><ol class="read">' + items + '</ol></section>';
 }
 
-/* Scan logic: from OCR lines, keep only the Ex marking, the IP rating and the certificate. Everything else is ignored. */
-var ScanLogic = (function () {
-  function clean(t) { return String(t || '').replace(/[|_~`´¬]+/g, ' ').replace(/\s+/g, ' ').trim(); }
-
-  function okEx(r) {
-    var k = r.parts.map(function (p) { return p.kind; });
-    return { has: k.indexOf('ex') > -1, group: k.indexOf('gas') > -1 || k.indexOf('dust') > -1, level: k.indexOf('temp') > -1 || k.indexOf('epl') > -1, prot: k.indexOf('prot') > -1, n: r.parts.length };
-  }
-
-  /* Find an Ex marking in one line. complete = group and temperature or level found. Otherwise the clear start is kept and the rest is flagged. */
-  function findEx(line) {
-    var m = /\b(?:EEx|AEx|Ex)\b/i.exec(line);
-    if (!m) return null;
-    var before = line.slice(0, m.index).trim(), after = line.slice(m.index).trim();
-    var pre = /(?:\bCE\s*\d{4}\s*)?(?:\b(?:II|I)\s*(?:M[12]|[123](?:\s*\(\s*[123]\s*\))?\s*(?:GD|DG|G|D)?)\s*)$/i.exec(before);
-    var head = pre ? pre[0].trim() : '';
-    var preUnclear = !pre && /[A-Za-z0-9]/.test(before) && /\b(?:II|I|CE|\d[GD])\b/i.test(before);
-    var toks = after.split(/\s+/), best = null;
-    for (var n = toks.length; n >= 1; n--) {
-      var c = (head ? head + ' ' : '') + toks.slice(0, n).join(' ');
-      var r = ExEngine.analyze('ATEX', c, '', '');
-      if (r.unknown.length) continue;
-      if (/(?:^|\s)(?:IA|IB|IC|MA|MB|MC|DB|DC|EB|EC|OB|OC|QB|TB|TC|TA)(?=\s|$)/.test(toks.slice(0, n).join(' '))) continue;
-      var o = okEx(r);
-      if (!o.has || !(o.prot || o.group)) continue;
-      var complete = o.group && o.level;
-      best = { text: c, complete: complete, rest: n < toks.length, preUnclear: preUnclear, res: r, sys: r.parts.some(function (p) { return p.kind === 'cat'; }) ? 'ATEX' : 'IECEx' };
-      break;
-    }
-    if (best && best.complete) best.rest = false;
-    return best;
-  }
-  function findNEC(line) {
-    if (!/\bclass(?:es)?\s*[I1]{1,3}\b/i.test(line) && !/\bdiv(?:ision)?\b/i.test(line)) return null;
-    var r = ExEngine.analyze('NEC', line, '', '');
-    var k = r.parts.map(function (p) { return p.kind; });
-    if (r.unknown.length === 0 && k.indexOf('class') > -1 && (k.indexOf('div') > -1 || k.indexOf('zone') > -1)) return { text: clean(line), complete: true, rest: false, preUnclear: false, res: r, sys: 'NEC' };
-    return null;
-  }
-  function betterEx(a, b) {
-    if (!a) return b; if (!b) return a;
-    if (a.complete !== b.complete) return a.complete ? a : b;
-    return b.res.parts.length > a.res.parts.length ? b : a;
-  }
-
-  /* which standard the plate belongs to, with the reasons */
-  function detect(all, ex, cert) {
-    var ev = { ATEX: [], IECEx: [], NEC: [] };
-    if (/\bEEx\b/.test(all)) ev.ATEX.push({ en: 'the EEx mark (the older European form)', ar: 'علامة EEx (الصيغة الأوروبية الأقدم)' });
-    if (/\bATEX\b/i.test(all)) ev.ATEX.push({ en: 'the word ATEX', ar: 'كلمة ATEX' });
-    if (/\bCE\s*\d{4}\b/i.test(all) || /\bCE\b/.test(all)) ev.ATEX.push({ en: 'the CE mark', ar: 'علامة CE' });
-    if (/\b(?:II|I)\s*(?:M[12]|[123]\s*(?:\(\s*[123]\s*\))?\s*(?:GD|DG|G|D))\b/i.test(all)) ev.ATEX.push({ en: 'a group and category such as II 2G', ar: 'مجموعة وفئة مثل II 2G' });
-    if (cert && /ATEX/i.test(cert)) ev.ATEX.push({ en: 'an ATEX certificate number', ar: 'رقم شهادة ATEX' });
-    if (/\bIECEx\b/i.test(all)) ev.IECEx.push({ en: 'the word IECEx', ar: 'كلمة IECEx' });
-    if (cert && /IECEx/i.test(cert)) ev.IECEx.push({ en: 'an IECEx certificate number', ar: 'رقم شهادة IECEx' });
-    if (/\bAEx\b/.test(all)) ev.NEC.push({ en: 'the AEx mark', ar: 'علامة AEx' });
-    if (/\bclass(?:es)?\s*[I1]{1,3}\b/i.test(all) && /\b(?:div(?:ision)?|zone)\b/i.test(all)) ev.NEC.push({ en: 'Class with Division or Zone', ar: 'الصنف مع القسم أو المنطقة' });
-    if (/\b(?:UL|CSA|FM)\b/.test(all) && ev.NEC.length) ev.NEC.push({ en: 'a UL, CSA or FM mark', ar: 'علامة UL أو CSA أو FM' });
-    if (ex && ex.sys === 'IECEx' && !ev.ATEX.length && !ev.IECEx.length) ev.IECEx.push({ en: 'an Ex marking without a category or CE', ar: 'علامة Ex بدون فئة أو CE' });
-    var list = ['ATEX', 'IECEx', 'NEC'].filter(function (k) { return ev[k].length; });
-    list.sort(function (a, b) { return ev[b].length - ev[a].length; });
-    return { list: list, ev: ev };
-  }
-
-  function classify(lines) {
-    var texts = lines.map(function (l) { return { t: clean(l.text), c: l.confidence }; }).filter(function (x) { return x.t.length > 1 && (x.c === undefined || x.c >= 25); });
-    var all = texts.map(function (x) { return x.t; }).join(' \n ');
-    var ex = null, ip = null, ipBad = false, cert = null, certBad = false, mm;
-    texts.forEach(function (x) {
-      ex = betterEx(ex, betterEx(findEx(x.t), findNEC(x.t)));
-      if (!ip && (mm = /\bIP\s?([0-6X][0-9X])[A-Z]?\b/.exec(x.t))) ip = 'IP' + mm[1];
-      if (!cert && (mm = /\b(IECEx\s+[A-Z]{2,5}\s*\d{2}\.\d{3,5}[UX]?|[A-Z]{2,6}\s?\d{2}\s?ATEX\s?\d{3,5}[UX]?(?:\/\d+)?)\b/.exec(x.t))) {
-        var cd = ExEngine.decodeCert(mm[1]); if (cd && cd.kind !== 'unknown') cert = mm[1];
-      }
-    });
-    if (!ip && /(?:^|\s)[\[(|IiLl1]?P\s?[0-9X]{2}\b/.test(all)) ipBad = true;
-    if (!cert && /\b(?:ATEX|IECEx)\b/i.test(all) && /\d{2}\D{0,3}\d{3,5}/.test(all)) certBad = true;
-    var std = detect(all, ex, cert);
-    if (ex && !std.list.length) std.list = [ex.sys];
-    return { ex: ex, ip: ip, ipBad: ipBad, cert: cert, certBad: certBad, std: std, found: !!(ex || ip || cert) };
-  }
-
-  return { classify: classify, findEx: findEx };
-})();
-if (typeof module !== 'undefined' && module.exports) module.exports = ScanLogic;
-
-/* Scan from a photo: pick an image at any angle, straighten it, read it, and keep only Ex, IP and certificate */
-var TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-var scanSeq = 0;
-
-function loadTesseract() {
-  return new Promise(function (resolve, reject) {
-    if (window.Tesseract) return resolve(window.Tesseract);
-    var s = document.createElement('script');
-    s.src = TESS_URL; s.async = true;
-    s.onload = function () { window.Tesseract ? resolve(window.Tesseract) : reject(new Error('load')); };
-    s.onerror = function () { reject(new Error('load')); };
-    document.head.appendChild(s);
-  });
-}
-
-var scanImgCache = null;
-function loadImg(url) {
-  return new Promise(function (resolve, reject) {
-    if (scanImgCache && scanImgCache.url === url) return resolve(scanImgCache.img);
-    var img = new Image();
-    img.onload = function () { scanImgCache = { url: url, img: img }; resolve(img); };
-    img.onerror = function () { reject(new Error('img')); };
-    img.src = url;
-  });
-}
-
-/* draw the picture rotated by `deg` on a canvas of the right size, grey, with stretched contrast */
-function prepImage(img, longSide, deg) {
-  var w = img.naturalWidth, h = img.naturalHeight, k = longSide / Math.max(w, h);
-  if (k > 1.6) k = 1.6;
-  var rad = deg * Math.PI / 180, c = Math.abs(Math.cos(rad)), s = Math.abs(Math.sin(rad));
-  var cw = Math.round((w * c + h * s) * k), ch = Math.round((w * s + h * c) * k);
-  var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
-  var cx = cv.getContext('2d', { willReadFrequently: true });
-  cx.fillStyle = '#808080'; cx.fillRect(0, 0, cw, ch);
-  cx.translate(cw / 2, ch / 2); cx.rotate(rad); cx.drawImage(img, -w * k / 2, -h * k / 2, w * k, h * k);
-  try {
-    var id = cx.getImageData(0, 0, cw, ch), d = id.data, hist = new Array(256).fill(0), i;
-    for (i = 0; i < d.length; i += 4) { var g = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000 | 0; d[i] = d[i + 1] = d[i + 2] = g; hist[g]++; }
-    var tot = cw * ch, lo = 0, hi = 255, acc = 0;
-    for (i = 0; i < 256; i++) { acc += hist[i]; if (acc > tot * 0.01) { lo = i; break; } }
-    acc = 0; for (i = 255; i >= 0; i--) { acc += hist[i]; if (acc > tot * 0.01) { hi = i; break; } }
-    var span = Math.max(40, hi - lo);
-    for (i = 0; i < d.length; i += 4) { var v = (d[i] - lo) * 255 / span; v = v < 0 ? 0 : v > 255 ? 255 : v; d[i] = d[i + 1] = d[i + 2] = v; }
-    cx.setTransform(1, 0, 0, 1, 0, 0); cx.putImageData(id, 0, 0);
-  } catch (e) { }
-  return cv;
-}
-
-/* how much readable text a pass found: used to pick the right angle */
-var SCAN_KW = /^(EEx|Ex|AEx|IP\d\d|IIC|IIB|IIA|T[1-6]|Gb|Gc|Ga|Db|II|2G|3G|1G|2D)$/i;
-function scanScore(data) {
-  var words = (data && data.words) || [], s = 0;
-  words.forEach(function (w) {
-    var t = String(w.text || '').trim(), c = w.confidence || 0;
-    if (c >= 55 && /[A-Za-z0-9]{3,}/.test(t)) s += t.length * c / 100;
-    if (c >= 55 && SCAN_KW.test(t)) s += 3;
-  });
-  return s;
-}
-
-function setScanProgress(p, label) {
-  var bar = document.getElementById('scanbar'), t = document.getElementById('scanpct');
-  if (bar) bar.style.width = Math.round(Math.min(1, p) * 100) + '%';
-  if (t && label) t.textContent = label;
-}
+/* Nameplate photo: show the picture next to the typing boxes so the user can read it and type the marking */
+var photoZoom = 1;
 
 function startScan(file) {
   if (!file) return;
-  var id = ++scanSeq;
   if (state.scan && state.scan.url) { try { URL.revokeObjectURL(state.scan.url); } catch (e) { } }
-  state.scan = { id: id, url: URL.createObjectURL(file), status: 'loading', result: null };
+  state.scan = { url: URL.createObjectURL(file) };
+  photoZoom = 1;
+  /* start from empty boxes: the example text would be confusing next to a real plate */
+  if (state.m === EX[state.sys].m) state.m = '';
+  if (state.ip === EX[state.sys].ip) state.ip = '';
+  if (state.c === EX[state.sys].c) state.c = '';
   go('scan');
-  var live = function () { return state.scan && state.scan.id === id; };
-  var worker = null, step = '';
-  var say = function (p, en, ar) { if (live()) setScanProgress(p, T(L(en, ar))); };
-  var pass = function (cv) { return worker.recognize(cv).then(function (r) { return r.data; }); };
-
-  loadTesseract().then(function (Tess) {
-    if (!live()) throw new Error('stale');
-    say(0.04, 'Loading the reader…', 'جارٍ تحميل القارئ…');
-    return Tess.createWorker('eng', 1, {
-      logger: function (m) { if (live() && m && step === 'final' && m.status === 'recognizing text') setScanProgress(0.62 + 0.36 * (m.progress || 0), T(L('Reading the text…', 'جارٍ قراءة النص…'))); }
-    });
-  }).then(function (w) {
-    worker = w;
-    return worker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
-  }).then(function () { return loadImg(state.scan.url); }).then(function (img) {
-    /* 1) find the right angle: four quarter turns first */
-    step = 'angle';
-    var scores = {}, tried = 0;
-    var test = function (deg, total) {
-      deg = ((deg % 360) + 360) % 360;
-      if (scores[deg] !== undefined) return Promise.resolve();
-      if (!live()) throw new Error('stale');
-      return pass(prepImage(img, 800, deg)).then(function (d) { scores[deg] = scanScore(d); tried++; say(0.08 + 0.5 * Math.min(1, tried / total), 'Straightening the photo…', 'جارٍ تعديل زاوية الصورة…'); });
-    };
-    var seq = function (list, total) { return list.reduce(function (p, a) { return p.then(function () { return test(a, total); }); }, Promise.resolve()); };
-    var bestDeg = function () { var b = 0, bs = -1; Object.keys(scores).forEach(function (k) { if (scores[k] > bs) { bs = scores[k]; b = +k; } }); return { deg: b, score: bs }; };
-    return seq([0, 90, 180, 270], 4).then(function () {
-      if (bestDeg().score >= 30) { var b0 = bestDeg().deg; return seq([b0 - 10, b0 + 10], 6).then(function () { return bestDeg().deg; }); }
-      /* tilted photo: try tilts around every quarter turn, then refine */
-      var list = []; [0, 90, 180, 270].forEach(function (o) { [-30, -15, 15, 30].forEach(function (d) { list.push(o + d); }); });
-      return seq(list, 20).then(function () { var b = bestDeg().deg; return seq([b - 7, b + 7], 22).then(function () { return bestDeg().deg; }); });
-    }).then(function (deg) {
-      /* 2) read the straightened photo at a higher size */
-      step = 'final'; say(0.6, 'Reading the text…', 'جارٍ قراءة النص…');
-      return worker.recognize(prepImage(img, 2400, deg)).then(function (r) { return r.data; });
-    });
-  }).then(function (data) {
-    return worker.terminate().then(function () { return data; });
-  }).then(function (data) {
-    if (!live()) return;
-    var lines = ((data && data.lines) || []).map(function (l) { return { text: l.text, confidence: l.confidence }; });
-    state.scan.result = ScanLogic.classify(lines);
-    state.scan.status = 'done';
-    if (state.view === 'scan') render(true);
-  }).catch(function (e) {
-    try { if (worker) worker.terminate(); } catch (x) { }
-    if (!live() || (e && e.message === 'stale')) return;
-    state.scan.status = 'error';
-    state.scan.err = e && e.message === 'load' ? 'load' : 'read';
-    if (state.view === 'scan') render(true);
-  });
 }
 
-function scanRow(label, bodyHtml, cls) {
-  return '<section class="scanit ' + (cls || '') + '"><div class="sl"><b>' + T(label) + '</b></div>' + bodyHtml + '</section>';
+function rotatePhoto() {
+  if (!state.scan) return;
+  var img = new Image();
+  img.onload = function () {
+    var cv = document.createElement('canvas'); cv.width = img.naturalHeight; cv.height = img.naturalWidth;
+    var cx = cv.getContext('2d'); cx.translate(cv.width / 2, cv.height / 2); cx.rotate(Math.PI / 2); cx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    cv.toBlob(function (b) {
+      if (!b) return;
+      try { URL.revokeObjectURL(state.scan.url); } catch (e) { }
+      state.scan.url = URL.createObjectURL(b);
+      var im = document.getElementById('pimg'); if (im) im.src = state.scan.url;
+    }, 'image/jpeg', 0.92);
+  };
+  img.src = state.scan.url;
 }
-var NC = function () { return '<span class="pill bad">' + T(L('Not clear', 'غير واضح')) + '</span>'; };
-var NF = function () { return '<span class="pill mid">' + T(L('Not found', 'غير موجود')) + '</span>'; };
 
-function manualBtn() { return '<button type="button" class="btn2" data-act="scanmanual">' + T(L('Back to manual typing', 'الرجوع للكتابة يدويًا')) + '</button>'; }
+function zoomPhoto(d) {
+  photoZoom = Math.max(1, Math.min(5, photoZoom + d));
+  var im = document.getElementById('pimg'); if (im) im.style.width = (photoZoom * 100) + '%';
+  var z = document.getElementById('pz'); if (z) z.textContent = Math.round(photoZoom * 100) + '%';
+}
 
 function viewScan() {
   var sc = state.scan;
   var h = topBar(S.back);
   h += '<h1 class="ph1">' + T(L('Nameplate photo', 'صورة لوحة البيانات')) + '</h1>';
   if (!sc) return h + '<p class="lead">' + T(L('No photo yet.', 'لا توجد صورة بعد.')) + '</p>';
-  h += '<div class="scanimg"><img src="' + sc.url + '" alt=""></div>';
-  if (sc.status === 'loading') {
-    return h + '<div class="card"><p id="scanpct">' + T(L('Loading the reader…', 'جارٍ تحميل القارئ…')) + '</p><div class="prog"><i id="scanbar" style="width:4%"></i></div><p class="mut" style="margin-top:8px">' + T(L('The app straightens the photo by itself. It stays on your phone and is not uploaded anywhere.', 'يعدّل التطبيق زاوية الصورة بنفسه. وتبقى الصورة على هاتفك ولا تُرفع إلى أي مكان.')) + '</p></div>';
-  }
-  if (sc.status === 'error') {
-    var msg = sc.err === 'load' ? L('The reader could not be loaded. The first scan needs an internet connection. Check it and try again.', 'تعذّر تحميل القارئ. أول مرة تحتاج إلى اتصال بالإنترنت. تأكد منه وحاول مرة أخرى.') : L('The photo could not be read.', 'تعذّرت قراءة الصورة.');
-    return h + '<div class="warn bad">' + IC.ui.warn + '<div>' + T(msg) + '</div></div>' + manualBtn();
-  }
-  var r = sc.result;
-  if (!r.found) {
-    return h + '<div class="warn bad">' + IC.ui.warn + '<div><b>' + T(L('The text is not clear.', 'الكلام غير واضح.')) + '</b> ' + T(L('Please go back and type the marking by hand.', 'من فضلك ارجع واكتب العلامة يدويًا.')) + '</div></div>' + manualBtn();
-  }
-  /* the standard first */
-  var std = r.std.list;
-  var stdBody = std.length
-    ? '<div class="stdrow">' + std.map(function (k, i) { return '<span class="pill' + (i ? ' alt' : '') + '">' + ({ ATEX: 'ATEX', IECEx: 'IECEx', NEC: 'NEC / CEC' }[k]) + '</span>'; }).join('') + '</div><p class="mut">' + T(L('Because the plate shows: ', 'لأن اللوحة فيها: ')) + r.std.ev[std[0]].map(function (e) { return T(e); }).join(state.lang === 'ar' ? '، ' : ', ') + '.</p>'
-    : NC();
-  h += scanRow(L('Standard', 'المعيار'), stdBody, 'std');
-
-  var ex = r.ex, exBody;
-  if (!ex) exBody = NC();
-  else {
-    exBody = '<code class="ltr">' + esc(ex.text) + '</code>';
-    if (ex.rest || ex.preUnclear || !ex.complete) {
-      exBody += '<p class="mut">' + (ex.preUnclear ? T(L('The start of the marking is not clear. ', 'بداية العلامة غير واضحة. ')) : '') + (ex.rest || !ex.complete ? T(L('The rest of the marking is not clear.', 'باقي العلامة غير واضح.')) : '') + ' ' + NC() + '</p>';
-    }
-  }
-  h += scanRow(L('Ex marking', 'علامة Ex'), exBody, ex && ex.complete && !ex.rest ? '' : 'unclear');
-  h += scanRow(L('IP rating', 'درجة IP'), r.ip ? '<code class="ltr">' + esc(r.ip) + '</code>' : (r.ipBad ? NC() : NF()), r.ipBad ? 'unclear' : '');
-  h += scanRow(L('Certificate number', 'رقم الشهادة'), r.cert ? '<code class="ltr">' + esc(r.cert) + '</code>' : (r.certBad ? NC() : NF()), r.certBad ? 'unclear' : '');
-
-  h += '<button type="button" class="go" data-act="scanex" style="font-size:24px;min-height:54px;margin-top:12px"><span style="margin-inline:auto">' + T(S.explain) + '</span></button>';
-  h += manualBtn();
-  h += '<div class="disc">' + IC.ui.info + '<div><p>' + T(L('The photo is read automatically, so mistakes are possible. Compare with the real nameplate.', 'تُقرأ الصورة تلقائيًا، لذا قد تحدث أخطاء. قارن مع اللوحة الأصلية.')) + '</p></div></div>';
+  h += '<div class="ptools"><button type="button" data-act="pzoom" data-d="-0.5" aria-label="zoom out">−</button><span id="pz">' + Math.round(photoZoom * 100) + '%</span><button type="button" data-act="pzoom" data-d="0.5" aria-label="zoom in">+</button><button type="button" data-act="protate" class="rot">' + T(L('Rotate', 'تدوير')) + '</button></div>';
+  h += '<div class="pview"><img id="pimg" src="' + sc.url + '" alt="" style="width:' + (photoZoom * 100) + '%"></div>';
+  h += '<p class="mut" style="margin:6px 0 10px">' + T(L('Read the marking on the photo and type it below. The photo stays on your phone.', 'اقرأ العلامة من الصورة واكتبها بالأسفل. وتبقى الصورة على هاتفك.')) + '</p>';
+  var sysB = function (k, nm) { return '<button type="button" data-act="psys" data-k="' + k + '" class="' + (state.sys === k ? 'on' : '') + '" aria-pressed="' + (state.sys === k) + '">' + nm + '</button>'; };
+  h += '<div class="psys">' + sysB('ATEX', 'ATEX') + sysB('IECEx', 'IECEx') + sysB('NEC', 'NEC / CEC') + '</div>';
+  var ph = EX[state.sys];
+  var fld = function (id, label, val, p, hint) {
+    return '<div class="pfield"><label for="' + id + '">' + T(label) + '</label><input id="' + id + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(val) + '" placeholder="e.g. ' + esc(p) + '">' + (hint ? '<button type="button" class="hint" data-act="fill" data-f="' + id + '" data-v="' + esc(p) + '"><span>' + T(L('Example:', 'مثال:')) + '</span> <code class="ltr">' + esc(p) + '</code></button>' : '') + '</div>';
+  };
+  h += fld('f-m', S.fMarking, state.m, ph.m, true);
+  if (state.err) h += '<div class="err" id="err" role="alert">' + T(S.errEmpty) + '</div>';
+  h += '<div class="two2">' + fld('f-ip', S.fIP, state.ip, ph.ip, false) + fld('f-c', S.fCert, state.c, ph.c, false) + '</div>';
+  h += '<button type="button" class="go" data-act="explain" style="font-size:24px;min-height:54px;margin-top:12px"><span style="margin-inline:auto">' + T(S.explain) + '</span></button>';
   return h;
-}
-
-function scanUseEx() {
-  var r = state.scan && state.scan.result; if (!r) return;
-  state.sys = r.ex ? r.ex.sys : (r.std.list[0] || 'ATEX');
-  state.m = r.ex ? r.ex.text : ''; state.ip = r.ip || ''; state.c = r.cert || ''; state.err = '';
-  if (!state.m.trim()) { go('home'); return; }
-  state.pendingStd = r.std.list.slice();
-  explain();
-}
-function scanManual() {
-  var r = state.scan && state.scan.result;
-  if (r) { if (r.ex) { state.sys = r.ex.sys; state.m = r.ex.text; } state.ip = r.ip || state.ip; state.c = r.cert || state.c; }
-  state.err = ''; go('home');
-  setTimeout(function () { var f = document.getElementById('f-m'); if (f) { f.focus(); } }, 60);
 }
 
 /* App: state, rendering, events */
@@ -1940,10 +1745,10 @@ function viewHome() {
   };
   var ph = { ATEX: ['II 2G Ex db IIC T6 Gb', 'IP66', 'ABC14ATEX0123X'], IECEx: ['Ex db eb IIC T4 Gb', 'IP66', 'IECEx ABC 24.1234X'], NEC: ['Class I, Division 1, Groups C&D', 'IP67', '1234567'] }[state.sys];
   var field = function (id, icon, label, val, p, err, cls) {
-    return '<div class="field' + (cls ? ' ' + cls : '') + '"><span class="fi">' + icon + '</span><span class="sep"></span><div>' + '<label for="' + id + '">' + T(label) + '</label>' + '<input id="' + id + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(val) + '" placeholder="e.g. ' + esc(p) + '"></div>' + (err ? '<div class="err" id="err" role="alert">' + T(err) + '</div>' : '') + '</div>';
+    return '<div class="field' + (cls ? ' ' + cls : '') + '"><span class="fi">' + icon + '</span><span class="sep"></span><div>' + '<label for="' + id + '">' + T(label) + '</label>' + '<input id="' + id + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(val) + '" placeholder="e.g. ' + esc(p) + '"><button type="button" class="hint" data-act="fill" data-f="' + id + '" data-v="' + esc(p) + '"><span>' + T(L('Example:', 'مثال:')) + '</span> <code class="ltr">' + esc(p) + '</code></button></div>' + (err ? '<div class="err" id="err" role="alert">' + T(err) + '</div>' : '') + '</div>';
   };
   var ex = EX[state.sys].list.map(function (x, i) { return '<button type="button" data-act="ex" data-i="' + i + '">' + esc(x) + '</button>'; }).join('');
-  return '<div class="home"><input type="file" id="f-img" accept="image/*" hidden><header class="hero">' + C.SKYLINE + '<div class="inner"><div class="bar" style="justify-content:flex-end">' + langBar() + '</div>' +
+  return '<div class="home"><header class="hero">' + C.SKYLINE + '<div class="inner"><div class="bar" style="justify-content:flex-end">' + langBar() + '</div>' +
     '<h1 class="brand ltr"><span class="t1">Ex Nameplate</span><span class="t2">Analyzer</span></h1>' +
     '<p class="tag">' + tg[0] + '<i></i>' + tg[1] + '<i></i>' + tg[2] + '</p></div></header>' +
     '<div class="frame"><div class="panel"><i class="screw s1"></i><i class="screw s2"></i><i class="screw s3"></i><i class="screw s4"></i>' +
@@ -1952,7 +1757,6 @@ function viewHome() {
     field('f-m', IC.ui.doc, S.fMarking, state.m, ph[0], state.err ? S.errEmpty : null) +
     '<div class="two">' + field('f-ip', IC.ui.shield, S.fIP, state.ip, ph[1], null, 'sm') + field('f-c', IC.ui.cert, S.fCert, state.c, ph[2], null, 'sm') + '</div>' +
     '<button type="button" class="go" data-act="explain"><span style="display:flex;align-items:center;gap:12px;margin-inline:auto">' + IC.ui.search + '<span>' + T(S.explain) + '</span></span><span class="chev">' + IC.ui.chev + '</span></button>' +
-    '<button type="button" class="upl" data-act="scan">' + SCAN_ICON + '<span>' + T(L('Upload nameplate photo', 'ارفع صورة لوحة البيانات')) + '</span></button>' +
     '<div class="eg"><b>' + T(S.tryEx) + '</b><div class="row">' + ex + '<button type="button" class="clr" data-act="clear">' + T(S.clear) + '</button></div></div>' +
     '</div></div>' +
     '<nav class="nav" aria-label="Lessons"><button type="button" data-act="go" data-v="basics">' + IC.ui.book + '<span>' + T(S.nBasics) + '</span></button>' +
@@ -2061,11 +1865,13 @@ document.addEventListener('click', function (e) {
     try { localStorage.setItem('exlang', state.lang); } catch (x) { }
     render(true);
   } else if (a === 'go') { go(t.getAttribute('data-v')); }
+  else if (a === 'fill') { var fk = { 'f-m': 'm', 'f-ip': 'ip', 'f-c': 'c' }[t.getAttribute('data-f')]; if (fk) { state[fk] = t.getAttribute('data-v'); render(true); } }
   else if (a === 'sys') { setSystem(t.getAttribute('data-k')); }
   else if (a === 'explain') { explain(); }
   else if (a === 'scan') { var fi = document.getElementById('f-img'); if (fi) { fi.value = ''; fi.click(); } }
-  else if (a === 'scanex') { scanUseEx(); }
-  else if (a === 'scanmanual') { scanManual(); }
+  else if (a === 'pzoom') { zoomPhoto(parseFloat(t.getAttribute('data-d'))); }
+  else if (a === 'protate') { rotatePhoto(); }
+  else if (a === 'psys') { state.sys = t.getAttribute('data-k'); state.err = ''; render(true); }
   else if (a === 'ex') { state.m = EX[state.sys].list[parseInt(t.getAttribute('data-i'), 10)]; state.err = ''; render(true); }
   else if (a === 'clear') { state.m = ''; state.ip = ''; state.c = ''; state.err = ''; render(true); var f = document.getElementById('f-m'); if (f) f.focus(); }
   else if (a === 'anat') {
