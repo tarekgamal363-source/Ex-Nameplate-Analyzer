@@ -305,6 +305,36 @@ html[dir="rtl"] .home .tag { font-size: 15px; }
 .home .hero .inner { z-index: 1; }
 .home .brand { text-shadow: 0 2px 12px rgba(0,0,0,.8), 0 0 2px rgba(0,0,0,.9); }
 
+/* ---- scan from photo ---- */
+.lr { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lr label { margin-bottom: 0 !important; }
+.scanbtn { display: inline-flex; align-items: center; gap: 4px; background: var(--navy); color: #fff; border: 0; border-radius: 12px; padding: 4px 10px; min-height: 30px; font-size: 13px; font-weight: 600; flex: none; }
+.scanbtn svg { color: var(--yellow); }
+.scanimg { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 10px; background: #000; }
+.scanimg img { display: block; width: 100%; max-height: 260px; object-fit: contain; }
+.prog { height: 10px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 8px; }
+.prog i { display: block; height: 100%; background: var(--yellow); transition: width .3s; }
+.scanit { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.scanit.unclear { border-color: #7A3A3A; }
+.scanit .sl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; justify-content: space-between; margin-bottom: 4px; }
+.scanit code { font-family: var(--font-m); font-size: 13.5px; color: #fff; word-break: break-word; }
+.pill.ok { background: #1F6B3A; color: #fff; } .pill.mid { background: #3A4766; color: #fff; } .pill.bad { background: #8A2B2B; color: #fff; }
+.scanit .pill { font-size: 12px; padding: 2px 8px; border-radius: 10px; }
+.btn2.sm { margin-top: 8px; min-height: 40px; font-size: 15px; }
+
+.upl { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; min-height: 42px; background: var(--navy); color: #fff; border: 2px solid #3E72C8; border-radius: 14px; font-family: var(--font-d); font-weight: 700; font-size: 19px; letter-spacing: .2px; }
+html[dir="rtl"] .upl { font-family: var(--font-ar); font-size: 16px; }
+.upl svg { color: var(--yellow); flex: none; }
+.home .brand .t1 { font-size: clamp(22px, 3.9vh, 50px); }
+.home .brand .t2 { font-size: clamp(30px, 5.9vh, 78px); }
+.home .hero { min-height: 92px; }
+.home .upl { min-height: 38px; margin-top: 6px; }
+.home .sys button { min-height: 56px; }
+.home .nav button { min-height: 58px; }
+.home .plate { margin-bottom: 6px; }
+.home .go { min-height: 44px; }
+.home { padding-bottom: 50px; gap: 5px; } .home .eg { margin-top: 4px; }
+
 </style>
 </head>
 <body>
@@ -1592,6 +1622,259 @@ function readHtml(r) {
   return '<section class="card"><h3>' + T(L('Reading it left to right', 'قراءتها من اليسار إلى اليمين')) + '</h3><ol class="read">' + items + '</ol></section>';
 }
 
+/* Scan logic: turns OCR lines into "explained" / "read" / "not clear" items. No DOM here. */
+var ScanLogic = (function () {
+  var NOT_CLEAR = { en: 'Not clear', ar: 'غير واضح' };
+  var READ_ONLY = { en: 'Text read, no translation', ar: 'نص مقروء بدون ترجمة' };
+
+  var UNITS = {
+    V: { en: 'Voltage', ar: 'الجهد' }, A: { en: 'Current', ar: 'التيار' }, kW: { en: 'Power', ar: 'القدرة' }, W: { en: 'Power', ar: 'القدرة' },
+    HP: { en: 'Power', ar: 'القدرة' }, Hz: { en: 'Frequency', ar: 'التردد' }, rpm: { en: 'Speed', ar: 'السرعة' }, kg: { en: 'Weight', ar: 'الوزن' },
+    bar: { en: 'Pressure', ar: 'الضغط' }, kVA: { en: 'Apparent power', ar: 'القدرة الظاهرية' }
+  };
+  var LABELS = [
+    [/^(volt(?:age|s)?|rated voltage|u)$/i, 'V'], [/^(current|amps?|rated current|i)$/i, 'A'], [/^(power|output|rated power|p)$/i, 'kW'],
+    [/^(freq(?:uency)?|f)$/i, 'Hz'], [/^(speed|rpm)$/i, 'rpm'], [/^(weight|mass)$/i, 'kg'], [/^(pressure)$/i, 'bar']
+  ];
+  var PHRASES = [
+    [/do not open (?:when|while) (?:an )?(?:energi[sz]ed|live|powered)/i, { en: 'Do not open while energised.', ar: 'لا تفتح الغطاء والجهاز تحت الكهرباء.' }],
+    [/do not open (?:when|while) (?:an )?explosive (?:gas )?atmosphere/i, { en: 'Do not open when an explosive atmosphere is present.', ar: 'لا تفتح الغطاء عند وجود جو متفجر.' }],
+    [/(?:wait|delay)\s*(\d+)\s*(min|minutes|s|sec)/i, { en: 'Wait the stated time after switching off before opening.', ar: 'انتظر المدة المذكورة بعد الفصل قبل الفتح.' }],
+    [/electrostatic|static charg/i, { en: 'Danger of static electricity. Clean only with a damp cloth.', ar: 'خطر الكهرباء الساكنة. نظّف بقطعة قماش رطبة فقط.' }],
+    [/see (?:the )?(?:instructions|manual|certificate)/i, { en: 'Read the instructions or certificate before use.', ar: 'اقرأ التعليمات أو الشهادة قبل الاستخدام.' }],
+    [/^warning\b/i, { en: 'Warning. Read the text that follows.', ar: 'تحذير. اقرأ النص الذي يليه.' }],
+    [/made in\s+([A-Za-z ]+)/i, { en: 'Country of manufacture.', ar: 'بلد الصنع.' }],
+    [/(?:serial|ser\.?)\s*(?:no|number|nr|#)\.?/i, { en: 'Serial number.', ar: 'الرقم التسلسلي.' }],
+    [/\b(?:s\/n|sn)\b[:\s]/i, { en: 'Serial number.', ar: 'الرقم التسلسلي.' }],
+    [/\btype\b[:\s]/i, { en: 'Model or type code.', ar: 'رمز الطراز أو النوع.' }],
+    [/(?:year|date)(?: of manufacture)?[:\s]*\d{2,4}/i, { en: 'Year of manufacture.', ar: 'سنة الصنع.' }],
+    [/insulation class|ins\.? ?cl/i, { en: 'Insulation class of the windings.', ar: 'فئة عزل الملفات.' }],
+    [/\bduty\b|\bS[1-9]\b/i, { en: 'Duty type (how long it may run).', ar: 'نوع الخدمة (مدة التشغيل المسموحة).' }]
+  ];
+
+  function clean(t) { return String(t || '').replace(/[|_~`´¬]+/g, ' ').replace(/\s+/g, ' ').replace(/^[^A-Za-z0-9\[(]+/, '').replace(/[^A-Za-z0-9\])°%+]+$/, '').trim(); }
+  function garbage(t) { var n = t.length || 1, bad = (t.match(/[^A-Za-z0-9\s.,:;°%+\-\/()\[\]&]/g) || []).length; return bad / n > 0.25; }
+
+  /* Find an Ex marking inside a line. Returns {text, sys, res} only when it parses fully and looks complete. */
+  function findEx(line) {
+    var m = /(?:\bCE\s*\d{4}\s*)?(?:\b(?:II|I)\s*(?:M[12]|[123](?:\s*\(\s*[123]\s*\))?\s*(?:GD|DG|G|D)?)\s*)?\b(?:EEx|AEx|Ex)\b/i.exec(line);
+    if (!m) return null;
+    var cand = line.slice(m.index).trim();
+    var toks = cand.split(/\s+/);
+    for (var n = toks.length; n >= 3; n--) {
+      var c = toks.slice(0, n).join(' ');
+      var r = ExEngine.analyze('ATEX', c, '', '');
+      var kinds = r.parts.map(function (p) { return p.kind; });
+      var hasGroup = kinds.indexOf('gas') > -1 || kinds.indexOf('dust') > -1;
+      var ok = r.unknown.length === 0 && kinds.indexOf('ex') > -1 && hasGroup && (kinds.indexOf('temp') > -1 || kinds.indexOf('epl') > -1);
+      if (ok) return { text: c, sys: kinds.indexOf('cat') > -1 ? 'ATEX' : 'IECEx', res: r };
+    }
+    return null;
+  }
+  function findNEC(line) {
+    if (!/\bclass(?:es)?\s*[I1]{1,3}\b/i.test(line) && !/\bdiv(?:ision)?\b/i.test(line)) return null;
+    var r = ExEngine.analyze('NEC', line, '', '');
+    var kinds = r.parts.map(function (p) { return p.kind; });
+    if (r.unknown.length === 0 && kinds.indexOf('class') > -1 && (kinds.indexOf('div') > -1 || kinds.indexOf('zone') > -1)) return { text: line, sys: 'NEC', res: r };
+    return null;
+  }
+
+  function classifyLine(raw, conf) {
+    var t = clean(raw);
+    if (!t || t.length < 2) return null;
+    var out = { raw: raw, text: t, conf: conf, kind: 'unclear', notes: [] };
+    if (garbage(t) || (conf !== undefined && conf < 35)) return out;
+
+    var hit = false, mm;
+    var ex = findEx(t) || findNEC(t);
+    if (ex) {
+      out.ex = ex; hit = true;
+      out.notes.push({ code: ex.sys === 'NEC' ? 'NEC / CEC' : (ex.sys === 'ATEX' ? 'ATEX' : 'IECEx'), text: { en: 'Explosion-protection marking. Press the button to see the full explanation.', ar: 'علامة الحماية من الانفجار. اضغط الزر لتشاهد الشرح الكامل.' }, summary: ex.res.summary.slice(0, 3) });
+    }
+    mm = /\bIP\s?([0-6X][0-9X])[A-Z]?\b/i.exec(t);
+    if (mm) { var ip = 'IP' + mm[1].toUpperCase(); out.ip = ip; hit = true; out.notes.push({ code: ip, text: { en: 'Ingress protection rating (dust and water). See the IP lesson for the meaning of each digit.', ar: 'درجة الحماية من الغبار والماء. راجع درس IP لمعنى كل رقم.' } }); }
+    var cm = /\b(IECEx\s+[A-Z]{2,5}\s*\d{2}\.\d{3,5}[UX]?|[A-Z]{2,6}\s?\d{2}\s?ATEX\s?\d{3,5}[UX]?(?:\/\d+)?)\b/.exec(t);
+    if (cm) { var cd = ExEngine.decodeCert(cm[1]); if (cd && cd.kind !== 'unknown') { out.cert = cm[1]; hit = true; out.notes.push({ code: cm[1], text: { en: 'Certificate number. It identifies the test house and the certificate to look up.', ar: 'رقم الشهادة. يحدد جهة الاختبار والشهادة التي يمكن البحث عنها.' } }); } }
+    mm = /\bTa\s*[:=]?\s*(-?\d{1,3})\s*°?\s*C?\s*(?:to|\.{2,3}|…|–|—|~)\s*\+?(\d{1,3})\s*°?\s*C?/i.exec(t) || /(-?\d{1,3})\s*°?\s*C?\s*(?:≤|<=)\s*Ta\s*(?:≤|<=)\s*\+?(\d{1,3})/i.exec(t);
+    if (mm) { hit = true; out.notes.push({ code: mm[1] + '…+' + mm[2] + '°C', text: { en: 'Ambient temperature range the equipment is certified for.', ar: 'مدى حرارة المحيط الذي اعتُمدت المعدة له.' } }); }
+
+    /* electrical values: label + number + unit, or number + unit */
+    var seen = {}, re = /(?:([A-Za-z.]{1,12})\s*[:=]?\s*)?(\d{1,5}(?:[.,]\d{1,3})?)\s*(kVA|kW|HP|Hz|rpm|kg|bar|V|A|W)\b/g, vm;
+    while ((vm = re.exec(t))) {
+      var u = vm[3], key = u + vm[2];
+      if (seen[key]) continue; seen[key] = 1;
+      var lab = UNITS[u] || null;
+      if (lab) { hit = true; out.notes.push({ code: vm[2].replace(',', '.') + ' ' + u, text: { en: lab.en + '.', ar: lab.ar + '.' } }); }
+    }
+    PHRASES.forEach(function (ph) {
+      if (ph[0].test(t) && !(out.ex && /^warning/.test(ph[0].source))) { hit = true; out.notes.push({ code: '', text: ph[1] }); }
+    });
+    if (hit) { out.kind = 'ok'; return out; }
+    /* plain readable text, but nothing the app can translate */
+    if (/[A-Za-z]{3,}/.test(t) && (conf === undefined || conf >= 60)) { out.kind = 'read'; return out; }
+    return out;
+  }
+
+  function classify(lines) {
+    var items = [], ex = [], ip = null, cert = null;
+    lines.forEach(function (l) {
+      var it = classifyLine(l.text, l.confidence);
+      if (!it) return;
+      items.push(it);
+      if (it.ex) ex.push(it.ex);
+      if (it.ip && !ip) ip = it.ip;
+      if (it.cert && !cert) cert = it.cert;
+    });
+    return { items: items, ex: ex, ip: ip, cert: cert };
+  }
+
+  return { classify: classify, classifyLine: classifyLine, NOT_CLEAR: NOT_CLEAR, READ_ONLY: READ_ONLY };
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = ScanLogic;
+
+/* Scan from a photo: pick an image, read it on the phone, show what is clear and what is not */
+var TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+var scanSeq = 0;
+
+function loadTesseract() {
+  return new Promise(function (resolve, reject) {
+    if (window.Tesseract) return resolve(window.Tesseract);
+    var s = document.createElement('script');
+    s.src = TESS_URL; s.async = true;
+    s.onload = function () { window.Tesseract ? resolve(window.Tesseract) : reject(new Error('load')); };
+    s.onerror = function () { reject(new Error('load')); };
+    document.head.appendChild(s);
+  });
+}
+
+/* make the picture easier to read: right size, grey, stretched contrast */
+function prepImage(url) {
+  return new Promise(function (resolve, reject) {
+    var img = new Image();
+    img.onload = function () {
+      var w = img.naturalWidth, h = img.naturalHeight, long = Math.max(w, h), target = 1900;
+      var k = long > target ? target / long : (long < 1300 ? 1300 / long : 1);
+      var cw = Math.round(w * k), ch = Math.round(h * k);
+      var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+      var cx = cv.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(img, 0, 0, cw, ch);
+      try {
+        var id = cx.getImageData(0, 0, cw, ch), d = id.data, hist = new Array(256).fill(0), i;
+        for (i = 0; i < d.length; i += 4) { var g = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000 | 0; d[i] = d[i + 1] = d[i + 2] = g; hist[g]++; }
+        var tot = cw * ch, lo = 0, hi = 255, acc = 0;
+        for (i = 0; i < 256; i++) { acc += hist[i]; if (acc > tot * 0.01) { lo = i; break; } }
+        acc = 0; for (i = 255; i >= 0; i--) { acc += hist[i]; if (acc > tot * 0.01) { hi = i; break; } }
+        var span = Math.max(40, hi - lo);
+        for (i = 0; i < d.length; i += 4) { var v = (d[i] - lo) * 255 / span; v = v < 0 ? 0 : v > 255 ? 255 : v; d[i] = d[i + 1] = d[i + 2] = v; }
+        cx.putImageData(id, 0, 0);
+      } catch (e) { }
+      resolve(cv);
+    };
+    img.onerror = function () { reject(new Error('img')); };
+    img.src = url;
+  });
+}
+
+function setScanProgress(p, label) {
+  var bar = document.getElementById('scanbar'), t = document.getElementById('scanpct');
+  if (bar) bar.style.width = Math.round(p * 100) + '%';
+  if (t && label) t.textContent = label;
+}
+
+function startScan(file) {
+  if (!file) return;
+  var id = ++scanSeq;
+  if (state.scan && state.scan.url) { try { URL.revokeObjectURL(state.scan.url); } catch (e) { } }
+  state.scan = { id: id, url: URL.createObjectURL(file), status: 'loading', result: null };
+  go('scan');
+  var live = function () { return state.scan && state.scan.id === id; };
+  loadTesseract().then(function (Tess) {
+    if (!live()) throw new Error('stale');
+    setScanProgress(0.05, T(L('Preparing the picture…', 'جارٍ تجهيز الصورة…')));
+    return prepImage(state.scan.url).then(function (cv) {
+      return Tess.createWorker('eng', 1, {
+        logger: function (m) {
+          if (!live() || !m) return;
+          if (m.status === 'recognizing text') setScanProgress(0.2 + 0.78 * (m.progress || 0), T(L('Reading the text…', 'جارٍ قراءة النص…')) + ' ' + Math.round((m.progress || 0) * 100) + '%');
+          else if (/loading|initializ/i.test(m.status || '')) setScanProgress(0.1, T(L('Loading the reader…', 'جارٍ تحميل القارئ…')));
+        }
+      }).then(function (w) {
+        return w.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' }).then(function () { return w.recognize(cv); }).then(function (r) { return w.terminate().then(function () { return r; }); });
+      });
+    });
+  }).then(function (r) {
+    if (!live()) return;
+    var lines = ((r && r.data && r.data.lines) || []).map(function (l) { return { text: l.text, confidence: l.confidence }; });
+    state.scan.result = ScanLogic.classify(lines);
+    state.scan.status = 'done';
+    if (state.view === 'scan') render(true);
+  }).catch(function (e) {
+    if (!live() || (e && e.message === 'stale')) return;
+    state.scan.status = 'error';
+    state.scan.err = e && e.message === 'load' ? 'load' : 'read';
+    if (state.view === 'scan') render(true);
+  });
+}
+
+function pillFor(kind) {
+  if (kind === 'ok') return '<span class="pill ok">' + T(L('Explained', 'مُفسَّر')) + '</span>';
+  if (kind === 'read') return '<span class="pill mid">' + T(ScanLogic.READ_ONLY) + '</span>';
+  return '<span class="pill bad">' + T(ScanLogic.NOT_CLEAR) + ' · ' + (state.lang === 'ar' ? 'Not clear' : 'غير واضح') + '</span>';
+}
+
+function scanItemHtml(it, i) {
+  var h = '<section class="scanit ' + it.kind + '"><div class="sl"><code class="ltr">' + esc(it.text) + '</code>' + pillFor(it.kind) + '</div>';
+  if (it.kind === 'ok') {
+    h += '<ul class="plain">' + it.notes.map(function (n) {
+      var sm = n.summary && n.summary.length ? '<br><span class="mut">' + n.summary.map(function (x) { return T(x); }).join(' ') + '</span>' : '';
+      return '<li>' + (n.code ? '<span class="chip">' + esc(n.code) + '</span> ' : '') + T(n.text) + sm + '</li>';
+    }).join('') + '</ul>';
+    if (it.ex) h += '<button type="button" class="btn2 sm" data-act="scanex" data-i="' + i + '">' + T(L('Explain this code in full', 'اشرح هذا الكود بالتفصيل')) + '</button>';
+  } else if (it.kind === 'unclear' && /\b(EEx|AEx|Ex|class)\b/i.test(it.text)) {
+    h += '<p class="mut">' + T(L('This line looks like a marking but was not read clearly. Correct it by hand and explain it.', 'يبدو هذا السطر علامة حماية لكنه لم يُقرأ بوضوح. صحّحه بيدك ثم اشرحه.')) + '</p><button type="button" class="btn2 sm" data-act="scanedit" data-i="' + i + '">' + T(L('Edit it in the marking box', 'عدّله في خانة العلامة')) + '</button>';
+  }
+  return h + '</section>';
+}
+
+function viewScan() {
+  var sc = state.scan;
+  var h = topBar(S.back);
+  h += '<h1 class="ph1">' + T(L('Photo of the nameplate', 'صورة لوحة البيانات')) + '</h1>';
+  if (!sc) return h + '<p class="lead">' + T(L('No photo yet.', 'لا توجد صورة بعد.')) + '</p>';
+  h += '<div class="scanimg"><img src="' + sc.url + '" alt=""></div>';
+  if (sc.status === 'loading') {
+    return h + '<div class="card"><p id="scanpct">' + T(L('Loading the reader…', 'جارٍ تحميل القارئ…')) + '</p><div class="prog"><i id="scanbar" style="width:5%"></i></div><p class="mut" style="margin-top:8px">' + T(L('The photo stays on your phone. It is not uploaded anywhere.', 'تبقى الصورة على هاتفك ولا تُرفع إلى أي مكان.')) + '</p></div>';
+  }
+  if (sc.status === 'error') {
+    var msg = sc.err === 'load' ? L('The reader could not be loaded. The first scan needs an internet connection. Check it and try again.', 'تعذّر تحميل القارئ. أول مرة تحتاج إلى اتصال بالإنترنت. تأكد منه وحاول مرة أخرى.') : L('The photo could not be read. Try another photo.', 'تعذّرت قراءة الصورة. جرّب صورة أخرى.');
+    return h + '<div class="warn bad">' + IC.ui.warn + '<div>' + T(msg) + '</div></div><button type="button" class="btn2" data-act="go" data-v="home">' + T(S.again) + '</button>';
+  }
+  var r = sc.result, ok = r.items.filter(function (x) { return x.kind === 'ok'; }).length, bad = r.items.filter(function (x) { return x.kind === 'unclear'; }).length;
+  if (!r.items.length) h += '<div class="warn bad">' + IC.ui.warn + '<div>' + T(L('No text was found in this photo.', 'لم يُعثر على نص في هذه الصورة.')) + '</div></div>';
+  else h += '<div class="sum"><ul><li>' + T(L(ok + ' line(s) explained, ' + bad + ' not clear.', 'تم تفسير ' + ok + ' سطر، و' + bad + ' غير واضح.')) + '</li></ul></div>';
+  if (r.ex.length) h += '<button type="button" class="go" data-act="scanex" data-i="-1" style="font-size:22px;min-height:54px"><span style="margin-inline:auto">' + T(L('Explain the Ex code', 'اشرح كود Ex')) + '</span></button>';
+  else if (r.items.length) h += '<div class="warn">' + IC.ui.info + '<div>' + T(L('No clear Ex code was found. A sharper, straight-on photo with even light usually helps.', 'لم يُعثر على كود Ex واضح. تساعد غالبًا صورة أوضح ومن الأمام وبإضاءة متساوية.')) + '</div></div>';
+  h += '<div style="margin-top:12px">' + r.items.map(scanItemHtml).join('') + '</div>';
+  h += '<div class="disc">' + IC.ui.info + '<div><p>' + T(L('The app reads the photo automatically, so mistakes are possible, especially on shiny, worn or blurry plates. Always compare with the real nameplate.', 'يقرأ التطبيق الصورة تلقائيًا، لذا قد تحدث أخطاء، خاصة في اللوحات اللامعة أو المتآكلة أو غير الواضحة. قارن دائمًا مع اللوحة الأصلية.')) + '</p></div></div>';
+  h += '<button type="button" class="btn2" data-act="go" data-v="home">' + T(S.again) + '</button>';
+  return h;
+}
+
+function scanUseEx(i) {
+  var r = state.scan && state.scan.result; if (!r) return;
+  var ex = i < 0 ? r.ex[0] : (r.items[i] && r.items[i].ex);
+  if (!ex) return;
+  state.sys = ex.sys; state.m = ex.text; state.err = '';
+  state.ip = r.ip || ''; state.c = r.cert || '';
+  explain();
+}
+function scanEdit(i) {
+  var r = state.scan && state.scan.result; if (!r || !r.items[i]) return;
+  var t = r.items[i].text;
+  state.sys = /\bclass\b/i.test(t) ? 'NEC' : 'ATEX'; state.m = t; state.err = '';
+  go('home');
+}
+
 /* App: state, rendering, events */
 var S = C.S;
 var ADMOB_TESTING = false;
@@ -1602,7 +1885,7 @@ var EX = {
   IECEx: { m: 'Ex db eb IIC T4 Gb', ip: 'IP66', c: 'IECEx ABC 24.1234X', list: ['Ex db eb IIC T4 Gb', 'Ex ia IIC T4 Ga', 'Ex tb IIIC T85°C Db', 'Ex ec IIA T3 Gc', 'Ex px IIB T4 Gb'] },
   NEC: { m: 'Class I, Division 1, Groups C&D', ip: 'IP67', c: '1234567', list: ['Class I, Division 1, Groups C&D', 'Class II, Division 1, Groups E F G', 'Class I, Division 2, Groups A B C D T3', 'Class I, Zone 1, AEx db IIC T6 Gb', 'Class III, Division 1'] }
 };
-var state = { lang: 'en', view: 'home', sys: 'ATEX', m: EX.ATEX.m, ip: EX.ATEX.ip, c: EX.ATEX.c, err: '', result: null };
+var state = { scan: null, lang: 'en', view: 'home', sys: 'ATEX', m: EX.ATEX.m, ip: EX.ATEX.ip, c: EX.ATEX.c, err: '', result: null };
 
 try { var sl = localStorage.getItem('exlang'); if (sl === 'ar' || sl === 'en') state.lang = sl; else if ((navigator.language || '').toLowerCase().indexOf('ar') === 0) state.lang = 'ar'; } catch (e) { }
 
@@ -1617,6 +1900,8 @@ function topBar(titleObj) {
   return '<div class="bar"><button type="button" class="back" data-act="go" data-v="home">' + IC.ui.back + '<span>' + T(titleObj || S.back) + '</span></button>' + langBar() + '</div>';
 }
 
+var SCAN_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 9"/></svg>';
+
 function viewHome() {
   var tg = S.tag[state.lang === 'ar' ? 1 : 0];
   var sysBtn = function (k, flag, nm, sub) {
@@ -1624,10 +1909,10 @@ function viewHome() {
   };
   var ph = { ATEX: ['II 2G Ex db IIC T6 Gb', 'IP66', 'ABC14ATEX0123X'], IECEx: ['Ex db eb IIC T4 Gb', 'IP66', 'IECEx ABC 24.1234X'], NEC: ['Class I, Division 1, Groups C&D', 'IP67', '1234567'] }[state.sys];
   var field = function (id, icon, label, val, p, err, cls) {
-    return '<div class="field' + (cls ? ' ' + cls : '') + '"><span class="fi">' + icon + '</span><span class="sep"></span><div><label for="' + id + '">' + T(label) + '</label><input id="' + id + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(val) + '" placeholder="e.g. ' + esc(p) + '"></div>' + (err ? '<div class="err" id="err" role="alert">' + T(err) + '</div>' : '') + '</div>';
+    return '<div class="field' + (cls ? ' ' + cls : '') + '"><span class="fi">' + icon + '</span><span class="sep"></span><div>' + '<label for="' + id + '">' + T(label) + '</label>' + '<input id="' + id + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(val) + '" placeholder="e.g. ' + esc(p) + '"></div>' + (err ? '<div class="err" id="err" role="alert">' + T(err) + '</div>' : '') + '</div>';
   };
   var ex = EX[state.sys].list.map(function (x, i) { return '<button type="button" data-act="ex" data-i="' + i + '">' + esc(x) + '</button>'; }).join('');
-  return '<div class="home"><header class="hero">' + C.SKYLINE + '<div class="inner"><div class="bar" style="justify-content:flex-end">' + langBar() + '</div>' +
+  return '<div class="home"><input type="file" id="f-img" accept="image/*" hidden><header class="hero">' + C.SKYLINE + '<div class="inner"><div class="bar" style="justify-content:flex-end">' + langBar() + '</div>' +
     '<h1 class="brand ltr"><span class="t1">Ex Nameplate</span><span class="t2">Analyzer</span></h1>' +
     '<p class="tag">' + tg[0] + '<i></i>' + tg[1] + '<i></i>' + tg[2] + '</p></div></header>' +
     '<div class="frame"><div class="panel"><i class="screw s1"></i><i class="screw s2"></i><i class="screw s3"></i><i class="screw s4"></i>' +
@@ -1636,6 +1921,7 @@ function viewHome() {
     field('f-m', IC.ui.doc, S.fMarking, state.m, ph[0], state.err ? S.errEmpty : null) +
     '<div class="two">' + field('f-ip', IC.ui.shield, S.fIP, state.ip, ph[1], null, 'sm') + field('f-c', IC.ui.cert, S.fCert, state.c, ph[2], null, 'sm') + '</div>' +
     '<button type="button" class="go" data-act="explain"><span style="display:flex;align-items:center;gap:12px;margin-inline:auto">' + IC.ui.search + '<span>' + T(S.explain) + '</span></span><span class="chev">' + IC.ui.chev + '</span></button>' +
+    '<button type="button" class="upl" data-act="scan">' + SCAN_ICON + '<span>' + T(L('Upload nameplate photo', 'ارفع صورة لوحة البيانات')) + '</span></button>' +
     '<div class="eg"><b>' + T(S.tryEx) + '</b><div class="row">' + ex + '<button type="button" class="clr" data-act="clear">' + T(S.clear) + '</button></div></div>' +
     '</div></div>' +
     '<nav class="nav" aria-label="Lessons"><button type="button" data-act="go" data-v="basics">' + IC.ui.book + '<span>' + T(S.nBasics) + '</span></button>' +
@@ -1687,6 +1973,7 @@ function viewLesson(fn) { return topBar(S.back) + fn(); }
 function viewFor(v) {
   switch (v) {
     case 'result': return viewResult();
+    case 'scan': return viewScan();
     case 'basics': return viewLesson(viewBasics);
     case 'areas': return viewLesson(viewAreas);
     case 'types': return viewLesson(viewTypes);
@@ -1705,8 +1992,9 @@ function render(keepScroll) {
 
 function route() {
   var v = (location.hash || '').replace('#', '');
-  if (['home', 'result', 'basics', 'areas', 'types', 'ip', 'about'].indexOf(v) < 0) v = 'home';
+  if (['home', 'result', 'scan', 'basics', 'areas', 'types', 'ip', 'about'].indexOf(v) < 0) v = 'home';
   if (v === 'result' && !state.result) v = 'home';
+  if (v === 'scan' && !state.scan) v = 'home';
   state.view = v;
   render(false);
 }
@@ -1743,6 +2031,9 @@ document.addEventListener('click', function (e) {
   } else if (a === 'go') { go(t.getAttribute('data-v')); }
   else if (a === 'sys') { setSystem(t.getAttribute('data-k')); }
   else if (a === 'explain') { explain(); }
+  else if (a === 'scan') { var fi = document.getElementById('f-img'); if (fi) { fi.value = ''; fi.click(); } }
+  else if (a === 'scanex') { scanUseEx(parseInt(t.getAttribute('data-i'), 10)); }
+  else if (a === 'scanedit') { scanEdit(parseInt(t.getAttribute('data-i'), 10)); }
   else if (a === 'ex') { state.m = EX[state.sys].list[parseInt(t.getAttribute('data-i'), 10)]; state.err = ''; render(true); }
   else if (a === 'clear') { state.m = ''; state.ip = ''; state.c = ''; state.err = ''; render(true); var f = document.getElementById('f-m'); if (f) f.focus(); }
   else if (a === 'anat') {
@@ -1764,6 +2055,9 @@ document.addEventListener('input', function (e) {
   if (id === 'f-m') { state.m = e.target.value; if (state.err) { state.err = ''; var er = document.getElementById('err'); if (er) er.remove(); } }
   else if (id === 'f-ip') state.ip = e.target.value;
   else if (id === 'f-c') state.c = e.target.value;
+});
+document.addEventListener('change', function (e) {
+  if (e.target && e.target.id === 'f-img' && e.target.files && e.target.files[0]) startScan(e.target.files[0]);
 });
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Enter') return;
