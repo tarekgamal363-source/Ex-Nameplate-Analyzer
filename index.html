@@ -365,6 +365,13 @@ html[dir="rtl"] .upl { font-family: var(--font-ar); font-size: 16px; }
 .pfield input { width: 100%; height: 46px; border-radius: 12px; border: 2px solid #3E72C8; background: #fff; color: #0B1B3F; padding: 0 12px; font-family: var(--font-m); font-size: 16px; }
 .pfield .hint { color: #AEBBD6; } .pfield .hint code { color: #fff; }
 .two2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.home .two .hint { display: block; }
+
+.home .hero { min-height: 84px; }
+.home .brand .t1 { font-size: clamp(18px, 3.1vh, 40px); }
+.home .brand .t2 { font-size: clamp(26px, 4.7vh, 62px); }
+.home .hero .skyline.photo { object-position: 50% 58%; }
+.home .hint { font-size: 11.5px; padding-top: 1px; }
 
 </style>
 </head>
@@ -1190,7 +1197,7 @@ var C = (function () {
     explain: { en: 'Explain', ar: 'اشرح' },
     tryEx: { en: 'Try an example', ar: 'جرّب مثالًا' },
     clear: { en: 'Clear fields', ar: 'امسح الحقول' },
-    errEmpty: { en: 'Type a marking to explain.', ar: 'اكتب علامة لشرحها.' },
+    errEmpty: { en: 'Type at least one: the marking, the IP rating or the certificate number.', ar: 'اكتب واحدًا على الأقل: العلامة أو درجة IP أو رقم الشهادة.' },
     nBasics: { en: 'Ex Basics', ar: 'أساسيات Ex' },
     nAreas: { en: 'Hazardous Areas', ar: 'المناطق الخطرة' },
     nTypes: { en: 'Protection Types', ar: 'أنواع الحماية' },
@@ -1721,7 +1728,7 @@ var EX = {
   IECEx: { m: 'Ex db eb IIC T4 Gb', ip: 'IP66', c: 'IECEx ABC 24.1234X', list: ['Ex db eb IIC T4 Gb', 'Ex ia IIC T4 Ga', 'Ex tb IIIC T85°C Db', 'Ex ec IIA T3 Gc', 'Ex px IIB T4 Gb'] },
   NEC: { m: 'Class I, Division 1, Groups C&D', ip: 'IP67', c: '1234567', list: ['Class I, Division 1, Groups C&D', 'Class II, Division 1, Groups E F G', 'Class I, Division 2, Groups A B C D T3', 'Class I, Zone 1, AEx db IIC T6 Gb', 'Class III, Division 1'] }
 };
-var state = { scan: null, lang: 'en', view: 'home', sys: 'ATEX', m: EX.ATEX.m, ip: EX.ATEX.ip, c: EX.ATEX.c, err: '', result: null };
+var state = { scan: null, lang: 'en', view: 'home', sys: 'ATEX', m: '', ip: '', c: '', err: '', result: null };
 
 try { var sl = localStorage.getItem('exlang'); if (sl === 'ar' || sl === 'en') state.lang = sl; else if ((navigator.language || '').toLowerCase().indexOf('ar') === 0) state.lang = 'ar'; } catch (e) { }
 
@@ -1777,10 +1784,10 @@ function viewResult() {
   var R = state.result, r = R.r;
   var sysName = { ATEX: 'ATEX', IECEx: 'IECEx', NEC: 'NEC / CEC' }[R.sys];
   var h = topBar(S.result);
-  h += '<div class="echo"><div class="sysrow">' + (R.std && R.std.length ? R.std.map(function (k, i) { return '<span class="pill' + (i ? ' alt' : '') + '">' + ({ ATEX: 'ATEX', IECEx: 'IECEx', NEC: 'NEC / CEC' }[k]) + '</span>'; }).join('') : '<span class="pill">' + sysName + '</span>') + '</div><div class="code">' + esc(R.m) + '</div></div>';
-  if (!r.recognized) {
+  h += '<div class="echo"><div class="sysrow">' + (R.std && R.std.length ? R.std.map(function (k, i) { return '<span class="pill' + (i ? ' alt' : '') + '">' + ({ ATEX: 'ATEX', IECEx: 'IECEx', NEC: 'NEC / CEC' }[k]) + '</span>'; }).join('') : '<span class="pill">' + sysName + '</span>') + '</div><div class="code">' + [R.m, R.ip, R.c].filter(function (x) { return String(x || '').trim(); }).map(function (x) { return esc(String(x).trim()); }).join('<br>') + '</div></div>';
+  if (!r.recognized && String(R.m || '').trim()) {
     h += '<div class="warn bad">' + IC.ui.warn + '<div><b>' + T(S.unrecT) + '</b><br>' + T(S.unrecH) + '</div></div>';
-  } else if (r.summary.length) {
+  } else if (r.recognized && r.summary.length) {
     h += '<div class="sum"><ul>' + r.summary.map(function (x) { return '<li>' + T(x) + '</li>'; }).join('') + '</ul></div>';
   }
   if (r.zones.length) h += '<div class="zones"><span>' + T(S.zonesLbl) + '</span>' + r.zones.map(function (z) { return '<span class="z z' + z + '">' + z + '</span>'; }).join('') + '</div>';
@@ -1837,21 +1844,17 @@ function route() {
 function go(v) { if (location.hash === '#' + v) route(); else location.hash = v; }
 
 function explain() {
-  state.m = (document.getElementById('f-m') || {}).value || state.m;
-  if (!String(state.m).trim()) { state.err = 'x'; render(true); var f = document.getElementById('f-m'); if (f) f.focus(); return; }
+  var g = function (id, k) { var el = document.getElementById(id); if (el) state[k] = el.value; };
+  g('f-m', 'm'); g('f-ip', 'ip'); g('f-c', 'c');
+  if (!String(state.m).trim() && !String(state.ip).trim() && !String(state.c).trim()) { state.err = 'x'; render(true); var f = document.getElementById('f-m'); if (f) f.focus(); return; }
   state.err = '';
   var r = ExEngine.analyze(state.sys, state.m, state.ip, state.c);
-  state.result = { r: r, sys: state.sys, m: state.m, std: state.pendingStd || null };
+  state.result = { r: r, sys: state.sys, m: state.m, ip: state.ip, c: state.c, std: state.pendingStd || null };
   state.pendingStd = null;
   go('result');
 }
 
 function setSystem(k) {
-  var prev = EX[state.sys];
-  var next = EX[k];
-  if (!String(state.m).trim() || state.m === prev.m) state.m = next.m;
-  if (!String(state.ip).trim() || state.ip === prev.ip) state.ip = next.ip;
-  if (!String(state.c).trim() || state.c === prev.c) state.c = next.c;
   state.sys = k; state.err = '';
   render(true);
 }
